@@ -1,5 +1,5 @@
 # PIATEK — discovery czesc 5 (kontynuacja), bez wysylki maili.
-# Task Scheduler: piatek 16:00
+# Task Scheduler: piatek 18:00
 
 . "$PSScriptRoot\_common.ps1"
 Enter-GuCampaign

@@ -1,9 +1,9 @@
 name: GU poniedzialek send
 
-# Harmonogram GHA aktywny tylko 14.07–21.07.2026 (Europe/Warsaw); poza tym oknem — lokalnie.
+# Send partia 1 poniedziałek 06:30 Europe/Warsaw.
 on:
   schedule:
-    - cron: "0 9 * * 1"
+    - cron: "30 6 * * 1"
       timezone: Europe/Warsaw
   workflow_dispatch:
     inputs:

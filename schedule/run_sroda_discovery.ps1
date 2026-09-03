@@ -1,6 +1,6 @@
 # SRODA — discovery czesc 3 (kontynuacja), bez wysylki maili.
 
-# Task Scheduler: sroda 19:00
+# Task Scheduler: sroda 18:00
 
 
 

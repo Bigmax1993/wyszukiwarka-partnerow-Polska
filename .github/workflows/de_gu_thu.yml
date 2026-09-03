@@ -1,9 +1,9 @@
 name: GU niedziela backfill
 
-# Harmonogram GHA aktywny tylko 14.07–21.07.2026 (Europe/Warsaw); poza tym oknem — lokalnie.
+# Backfill niedziela 03:00 Europe/Warsaw.
 on:
   schedule:
-    - cron: "30 5 * * 0"
+    - cron: "0 3 * * 0"
       timezone: Europe/Warsaw
   workflow_dispatch:
     inputs:

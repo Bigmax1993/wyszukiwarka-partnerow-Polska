@@ -1,5 +1,5 @@
 # PONIEDZIALEK — przygotowanie (rebuild Excel z cache, bez wysylki).
-# Task Scheduler: poniedzialek 07:00 (przed wysylka 09:00)
+# Task Scheduler: poniedzialek 04:30 (przed wysylka 06:30)
 
 
 

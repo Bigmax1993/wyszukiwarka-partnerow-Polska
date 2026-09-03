@@ -1,17 +1,9 @@
 name: GU discovery
 
-# Harmonogram GHA aktywny tylko 14.07–21.07.2026 (Europe/Warsaw); poza tym oknem — lokalnie.
+# Discovery pon–pt 18:00 Europe/Warsaw (propozycja 21:00 przesunięta o 3 h).
 on:
   schedule:
-    - cron: "0 17 * * 1"
-      timezone: Europe/Warsaw
-    - cron: "0 15 * * 2"
-      timezone: Europe/Warsaw
-    - cron: "0 19 * * 3"
-      timezone: Europe/Warsaw
-    - cron: "0 20 * * 4"
-      timezone: Europe/Warsaw
-    - cron: "0 16 * * 5"
+    - cron: "0 18 * * 1-5"
       timezone: Europe/Warsaw
   workflow_dispatch:
     inputs:

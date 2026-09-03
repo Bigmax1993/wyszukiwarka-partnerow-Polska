@@ -1,13 +1,11 @@
 name: Sync wyniki Google Drive
 
-# Stała reguła kampanii GU:
-# - Harmonogram: poniedziałek 06:00 Europe/Warsaw (cron + timezone).
-# - Źródło danych: pierwszy dostępny artefakt thu → mon → tue → fri
-#   (Excel po niedzielnym backfillu; NIE fri/tue z poprzedniej wysyłki).
-# - Po backfillu: auto-chain do prep (cron pon 06:00 jako zapas).
-# - Excel (.xlsx): kopia z datą + nadpisanie de_gu_bauunternehmen_kontakte.xlsx (aktualny).
+# Stała reguła kampanii:
+# - Harmonogram: poniedziałek 03:00 Europe/Warsaw.
+# - Źródło: artefakt thu → mon → tue → fri (Excel po niedzielnym backfillu).
+# - Po uploadzie: auto-chain do prep (cron pon 04:30 jako zapas).
+# - Excel: kopia z datą + nadpisanie de_gu_bauunternehmen_kontakte.xlsx.
 
-# Harmonogram GHA aktywny tylko 14.07–21.07.2026 (Europe/Warsaw); poza tym oknem — lokalnie.
 on:
   workflow_dispatch:
     inputs:
@@ -16,7 +14,7 @@ on:
         required: false
         type: string
   schedule:
-    - cron: "0 6 * * 1"
+    - cron: "0 3 * * 1"
       timezone: Europe/Warsaw
 
 permissions:

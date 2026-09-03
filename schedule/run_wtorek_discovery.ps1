@@ -1,5 +1,5 @@
 # WTOREK — discovery czesc 2 (kontynuacja), bez wysylki maili.
-# Task Scheduler: wtorek 15:00
+# Task Scheduler: wtorek 18:00
 
 . "$PSScriptRoot\_common.ps1"
 Enter-GuCampaign

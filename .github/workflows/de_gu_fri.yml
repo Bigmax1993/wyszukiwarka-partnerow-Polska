@@ -1,7 +1,10 @@
 name: GU wtorek send
 
-# Pominiety na GHA (cron i auto-chain wylaczone) — tylko reczne workflow_dispatch.
+# Send partia 2 wtorek 06:30 Europe/Warsaw.
 on:
+  schedule:
+    - cron: "30 6 * * 2"
+      timezone: Europe/Warsaw
   workflow_dispatch:
     inputs:
       artifact_run_id:

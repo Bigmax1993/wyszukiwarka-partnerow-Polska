@@ -1,6 +1,6 @@
 # CZWARTEK — discovery czesc 4 (kontynuacja), bez wysylki maili.
 
-# Task Scheduler: czwartek 20:00
+# Task Scheduler: czwartek 18:00
 
 
 

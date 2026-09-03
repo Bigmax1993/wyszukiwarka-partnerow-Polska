@@ -20,7 +20,7 @@ Folder może być **pusty** przed pierwszym uruchomieniem scrapera — pliki pow
 
 | Sposób | Kiedy |
 |--------|--------|
-| **GitHub Actions** | Workflow `Sync wyniki Google Drive` (poniedziałek 06:00 PL / ręcznie) |
+| **GitHub Actions** | Workflow `Sync wyniki Google Drive` (poniedziałek 03:00 PL / ręcznie) |
 | **Lokalnie** | `python scripts/gdrive_upload_wyniki.py --campaign-dir .` (`--dry-run` bez uploadu) |
 | **PC + Drive for desktop** | Zmienna `KANBUD_GOOGLE_DRIVE_GU_PATH` → zapis na bieżąco |
 
@@ -40,8 +40,8 @@ Skrypt ustawi secrets `GDRIVE_OAUTH_*` i uruchomi sync. Kolejne runy CI uploaduj
 
 | Reguła | Wartość |
 |--------|---------|
-| **Kiedy** | **Poniedziałek 06:00** (Europe/Warsaw); ręcznie: `gh workflow run "Sync wyniki Google Drive"` |
-| **Cron** | `0 6 * * 1` (Europe/Warsaw) |
+| **Kiedy** | **Poniedziałek 03:00** (Europe/Warsaw); ręcznie: `gh workflow run "Sync wyniki Google Drive"` |
+| **Cron** | `0 3 * * 1` (Europe/Warsaw) |
 | **Źródło danych** | Artefakt **`de-gu-wyniki-thu`** (niedzielny backfill) |
 | **Kolejność fallback** | `thu` → `mon` → `tue` → `fri` |
 | **Trigger** | Tylko `schedule` + `workflow_dispatch` |

@@ -1,6 +1,6 @@
 # WTOREK — wysylka partia 2 (reszta backlogu, limit 300/dzien).
 
-# Task Scheduler: wtorek 09:00
+# Task Scheduler: wtorek 06:30
 
 
 

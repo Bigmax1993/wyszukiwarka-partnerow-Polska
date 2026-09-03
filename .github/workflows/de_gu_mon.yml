@@ -1,9 +1,9 @@
 name: GU poniedzialek prep
 
-# Harmonogram GHA aktywny tylko 14.07–21.07.2026 (Europe/Warsaw); poza tym oknem — lokalnie.
+# Prep poniedziałek 04:30 Europe/Warsaw (po Drive 03:00).
 on:
   schedule:
-    - cron: "0 7 * * 1"
+    - cron: "30 4 * * 1"
       timezone: Europe/Warsaw
   workflow_dispatch:
 

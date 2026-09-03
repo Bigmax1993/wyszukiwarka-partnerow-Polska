@@ -1,5 +1,5 @@
 # PONIEDZIALEK — discovery czesc 1 (Serper + www), bez wysylki maili.
-# Task Scheduler: poniedzialek 17:00
+# Task Scheduler: poniedzialek 18:00
 
 . "$PSScriptRoot\_common.ps1"
 Enter-GuCampaign
