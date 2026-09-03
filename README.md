@@ -81,8 +81,11 @@ Upload Drive (OAuth / service account z env, nie commituj `secrets/`):
 
 ```powershell
 python scripts\gdrive_upload_wyniki.py --campaign-dir . --dry-run
+python scripts\gdrive_upload_wyniki.py --campaign-dir . --only-final-excel --dry-run
 # prawdziwy upload tylko po Twoim potwierdzeniu (wymaga GDRIVE_OAUTH_* albo service account)
 ```
+
+`--only-final-excel` wysyła wyłącznie `de_gu_bauunternehmen_kontakte.xlsx` (bez `cache`, `log` i `wyslane/`).
 
 ## Sekrety (GHA i lokalnie)
 

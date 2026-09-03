@@ -22,6 +22,7 @@ Folder może być **pusty** przed pierwszym uruchomieniem scrapera — pliki pow
 |--------|--------|
 | **GitHub Actions** | Workflow `Sync wyniki Google Drive` (poniedziałek 03:00 PL / ręcznie) |
 | **Lokalnie** | `python scripts/gdrive_upload_wyniki.py --campaign-dir .` (`--dry-run` bez uploadu) |
+| **Lokalnie — tylko Excel końcowy** | `python scripts/gdrive_upload_wyniki.py --campaign-dir . --only-final-excel` |
 | **PC + Drive for desktop** | Zmienna `KANBUD_GOOGLE_DRIVE_GU_PATH` → zapis na bieżąco |
 
 ### Upload z GitHub Actions (OAuth — zalecane przy folderze na „Moim dysku”)
@@ -47,6 +48,22 @@ Skrypt ustawi secrets `GDRIVE_OAUTH_*` i uruchomi sync. Kolejne runy CI uploaduj
 | **Trigger** | Tylko `schedule` + `workflow_dispatch` |
 
 Maile Hurt Matbud **nie** wymagają załącznika PPTX (`DISABLE_EMAIL_ATTACHMENT=1`).
+
+## Tylko finalny Excel
+
+Jeśli chcesz wysyłać na Drive wyłącznie końcowy plik kontaktów:
+
+```powershell
+python scripts/gdrive_upload_wyniki.py --campaign-dir . --only-final-excel
+```
+
+Skrypt wybiera `Wyniki/de_gu_bauunternehmen_kontakte.xlsx` (fallback: najnowszy `.xlsx` w `Wyniki/`).
+
+## Typowy powód błędu sync w GHA
+
+Jeśli workflow `Sync wyniki Google Drive` pada z `Brak plikow do wyslania (puste Wyniki/)`,
+to znaczy, że nie było świeżego artefaktu (`de-gu-wyniki-thu` → `wed` → `mon` → `tue` → `fri`)
+i repo na runnerze nie miało lokalnych plików `Wyniki/`.
 
 ## Konto usługi Google (jednorazowo)
 

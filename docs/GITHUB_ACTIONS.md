@@ -14,7 +14,7 @@ Repozytorium: [wyszukiwarka-partnerow-Polska](https://github.com/Bigmax1993/wysz
 | **Poniedziałek excel email** | `de_gu_mon_excel_email.yml` | cron, ręcznie | Excel na Gmail (05:00 PL) |
 | **Poniedziałek send** | `de_gu_tue.yml` | cron, ręcznie | Wysyłka Hurt Matbud (max 20) → `de-gu-wyniki-tue` |
 | **Wtorek send** | `de_gu_fri.yml` | cron, ręcznie | Kolejna partia (max 20) → `de-gu-wyniki-fri` |
-| **Sync Google Drive** | `sync-google-drive.yml` | cron pon 03:00 PL, ręcznie | Upload `Wyniki/` na Drive `1LdIQi0t1fgQMlHwNnvMdPn5lyv1zOqIJ` |
+| **Sync Google Drive** | `sync-google-drive.yml` | cron pon 03:00 PL, ręcznie | Upload `Wyniki/` na Drive `1LdIQi0t1fgQMlHwNnvMdPn5lyv1zOqIJ` (lokalnie możesz użyć `--only-final-excel`) |
 
 ## Harmonogram cron (Europe/Warsaw)
 
@@ -80,3 +80,9 @@ gh workflow run "GU poniedzialek send" -R Bigmax1993/wyszukiwarka-partnerow-Pols
 ```
 
 Kolejność: discovery (pon–pt) → backfill → sync Drive → prep → send. Najpierw dry-run maili lokalnie.
+
+Jeśli chcesz wysyłać tylko finalny Excel poza GHA:
+
+```powershell
+python scripts\gdrive_upload_wyniki.py --campaign-dir . --only-final-excel
+```
