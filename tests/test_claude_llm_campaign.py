@@ -17,14 +17,14 @@ from page_verify import apply_page_verdict, parse_page_verify_response
 
 class ClaudeDiscoveryTermsTest(unittest.TestCase):
     def test_parse_lines_strips_numbering(self):
-        raw = "1. Generalunternehmer Filialbau Hannover\nGU Supermarktbau Braunschweig"
+        raw = "1. wyposażenie sklepów Wrocław Niemcy\nmontaż posadzek Wrocław Deutschland"
         lines = parse_discovery_term_lines(raw)
         self.assertEqual(len(lines), 2)
-        self.assertIn("Generalunternehmer", lines[0])
+        self.assertIn("wyposażenie", lines[0])
 
-    def test_validate_accepts_gu_term_with_chain(self):
+    def test_validate_accepts_pl_trade_in_germany(self):
         self.assertTrue(
-            validate_discovery_term("Generalunternehmer Filialbau Hannover Aldi markt")
+            validate_discovery_term("wyposażenie sklepów Wrocław Niemcy")
         )
 
     def test_validate_rejects_gu_term_without_chain(self):
