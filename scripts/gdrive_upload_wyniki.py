@@ -390,6 +390,19 @@ def upload_folder_named(
     return count
 
 
+def _pick_final_excel_file(local_dir: Path) -> Path | None:
+    """Wybiera końcowy Excel kontaktów (fallback: najnowszy .xlsx)."""
+    if not local_dir.is_dir():
+        return None
+    preferred = local_dir / "de_gu_bauunternehmen_kontakte.xlsx"
+    if preferred.is_file():
+        return preferred
+    xlsx_files = [p for p in local_dir.iterdir() if p.is_file() and p.suffix.lower() == ".xlsx"]
+    if not xlsx_files:
+        return None
+    return max(xlsx_files, key=lambda p: p.stat().st_mtime)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Upload Wyniki do Google Drive")
     parser.add_argument(
@@ -407,6 +420,11 @@ def main() -> int:
         action="store_true",
         help="Tylko pokaż folder i pliki, bez uploadu",
     )
+    parser.add_argument(
+        "--only-final-excel",
+        action="store_true",
+        help="Wyślij wyłącznie końcowy plik Excel kontaktów z Wyniki/",
+    )
     args = parser.parse_args()
 
     if args.dry_run:
@@ -414,7 +432,13 @@ def main() -> int:
         w = wyniki_dir(data_root)
         print(f"DRY-RUN Drive folder={args.folder_id}")
         print(f"DRY-RUN lokalnie Wyniki={w}")
-        if w.is_dir():
+        if args.only_final_excel:
+            picked = _pick_final_excel_file(w)
+            if picked is None:
+                print("  Brak końcowego pliku .xlsx w Wyniki/")
+            else:
+                print(f"  ONLY-EXCEL {picked.name}")
+        elif w.is_dir():
             for p in sorted(w.iterdir()):
                 if p.is_file():
                     print(f"  {p.name}")
@@ -427,11 +451,26 @@ def main() -> int:
 
     total = 0
     w = wyniki_dir(data_root)
-    if w.is_dir():
+    if args.only_final_excel:
+        picked = _pick_final_excel_file(w)
+        if picked is None:
+            print("Brak końcowego pliku .xlsx do wysłania (Wyniki/).")
+            return 1
+        print(f"Upload tylko końcowego Excela: {picked} -> Drive {upload_folder_id}")
+        _upload_file(
+            service,
+            MediaFileUpload,
+            picked,
+            upload_folder_id,
+            version_xlsx=False,
+        )
+        print(f"  OK {picked.name}")
+        total = 1
+    elif w.is_dir():
         print(f"Upload plikow z {w} -> Drive {upload_folder_id}")
         total += upload_files_flat(service, MediaFileUpload, w, upload_folder_id)
     s = wyslane_dir(data_root)
-    if s.is_dir():
+    if s.is_dir() and not args.only_final_excel:
         print(f"Upload {s} -> Drive/wyslane/")
         total += upload_folder_named(service, MediaFileUpload, s, upload_folder_id, "wyslane")
 
