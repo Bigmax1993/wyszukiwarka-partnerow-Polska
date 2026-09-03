@@ -20,8 +20,15 @@ $env:USE_GEMINI_REPLY_INTELLIGENCE = "0"
 foreach ($pair in @(
     @{ Dst = "SERPER_API_KEY"; Src = "SERPER_API_KEY" },
     @{ Dst = "ANTHROPIC_API_KEY"; Src = "ANTHROPIC_API_KEY" },
+    @{ Dst = "ANTHROPIC_API_KEY"; Src = "CLAUDE_API_KEY" },
     @{ Dst = "MAIL_USER"; Src = "GMAIL_USER" },
-    @{ Dst = "MAIL_PASSWORD"; Src = "GMAIL_APP_PASSWORD" }
+    @{ Dst = "MAIL_PASSWORD"; Src = "GMAIL_APP_PASSWORD" },
+    @{ Dst = "GDRIVE_OAUTH_CLIENT_ID"; Src = "GDRIVE_OAUTH_CLIENT_ID" },
+    @{ Dst = "GDRIVE_OAUTH_CLIENT_SECRET"; Src = "GDRIVE_OAUTH_CLIENT_SECRET" },
+    @{ Dst = "GDRIVE_OAUTH_REFRESH_TOKEN"; Src = "GDRIVE_OAUTH_REFRESH_TOKEN" },
+    @{ Dst = "GDRIVE_SERVICE_ACCOUNT_JSON"; Src = "GDRIVE_SERVICE_ACCOUNT_JSON" },
+    @{ Dst = "GDRIVE_SERVICE_ACCOUNT_FILE"; Src = "GDRIVE_SERVICE_ACCOUNT_FILE" },
+    @{ Dst = "GDRIVE_SERVICE_ACCOUNT_FILE"; Src = "GOOGLE_APPLICATION_CREDENTIALS" }
 )) {
     if (-not (Get-Item -Path "Env:$($pair.Dst)" -ErrorAction SilentlyContinue)) {
         $val = [Environment]::GetEnvironmentVariable($pair.Src, "User")
@@ -68,7 +75,7 @@ Test-Step "regresja discovery GU (unittest)" {
 }
 
 Test-Step "regresja Excel append + Gmail (unittest)" {
-    python -m unittest tests.test_excel_append tests.test_send_excel_gmail -v
+    python -m unittest tests.test_excel_append tests.test_send_excel_gmail tests.test_claude_prompts -v
 }
 
 Test-Step "smoke scraper (--test)" {

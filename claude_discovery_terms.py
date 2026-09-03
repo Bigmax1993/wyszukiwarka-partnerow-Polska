@@ -34,20 +34,25 @@ def validate_discovery_term(term: str) -> bool:
     if len(t) < DISCOVERY_MIN_TERM_LEN or len(t) > DISCOVERY_MAX_TERM_LEN:
         return False
     low = t.lower()
-    if not is_generalunternehmer(low)[0]:
-        return False
-    if "bauunternehmen" in low and not any(
-        m.strip() in low for m in STRICT_GU_MARKERS if m.strip()
-    ):
-        return False
     from de_gu_keywords import SERPER_NEGATIVE_TERMS
 
     if any(neg in low for neg in SERPER_NEGATIVE_TERMS if len(neg) >= 4):
         return False
-    chains_low = [c.lower() for c in RETAIL_CHAINS_ROTATION]
-    if not any(chain in low for chain in chains_low):
-        return False
-    return True
+    de_mark = any(x in low for x in ("niemcy", "deutschland", "ladenbau", "innenausbau"))
+    trade = any(
+        x in low
+        for x in (
+            "wyposażenie",
+            "wyposazenie",
+            "posadzk",
+            "podwykonaw",
+            "meble sklep",
+            "budowl",
+            "montaż",
+            "montaz",
+        )
+    )
+    return bool(de_mark and trade)
 
 
 def _cities_for_lands(lands: list[str], *, max_cities: int = 8) -> list[str]:

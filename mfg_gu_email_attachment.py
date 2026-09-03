@@ -50,11 +50,20 @@ def _cache_attachment_path(campaign_dir: Path) -> Path:
     return wyniki_dir(root) / ATTACHMENT_FILENAME
 
 
+def _gdrive_env(name: str) -> str:
+    try:
+        from scraper_env import get_env_value
+
+        return get_env_value(name)
+    except Exception:
+        return (os.environ.get(name) or "").strip()
+
+
 def _load_drive_readonly_credentials():
     """OAuth (GHA) lub konto usługowe — do eksportu Slides → PPTX."""
-    refresh = (os.environ.get("GDRIVE_OAUTH_REFRESH_TOKEN") or "").strip()
-    client_id = (os.environ.get("GDRIVE_OAUTH_CLIENT_ID") or "").strip()
-    client_secret = (os.environ.get("GDRIVE_OAUTH_CLIENT_SECRET") or "").strip()
+    refresh = _gdrive_env("GDRIVE_OAUTH_REFRESH_TOKEN")
+    client_id = _gdrive_env("GDRIVE_OAUTH_CLIENT_ID")
+    client_secret = _gdrive_env("GDRIVE_OAUTH_CLIENT_SECRET")
     if refresh and client_id and client_secret:
         try:
             from google.auth.transport.requests import Request
@@ -79,8 +88,8 @@ def _load_drive_readonly_credentials():
     except ImportError:
         return None
 
-    raw = (os.environ.get("GDRIVE_SERVICE_ACCOUNT_JSON") or "").strip()
-    path = (os.environ.get("GDRIVE_SERVICE_ACCOUNT_FILE") or "").strip()
+    raw = _gdrive_env("GDRIVE_SERVICE_ACCOUNT_JSON")
+    path = _gdrive_env("GDRIVE_SERVICE_ACCOUNT_FILE")
     if raw:
         info = json.loads(raw)
         return service_account.Credentials.from_service_account_info(

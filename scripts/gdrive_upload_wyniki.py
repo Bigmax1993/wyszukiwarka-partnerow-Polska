@@ -23,8 +23,10 @@ from datetime import datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+_LIBS = ROOT / "libs"
+for _p in (ROOT, _LIBS):
+    if str(_p) not in sys.path:
+        sys.path.insert(0, str(_p))
 
 from campaign_data_paths import (  # noqa: E402
     GOOGLE_DRIVE_GU_FOLDER_ID,
@@ -32,9 +34,15 @@ from campaign_data_paths import (  # noqa: E402
     wyniki_dir,
     wyslane_dir,
 )
+from scraper_env import get_env_value  # noqa: E402
 
 # Pełny dostęp do Drive (wymagany dla Shared Drive i nadpisywania plików).
 SCOPES = ("https://www.googleapis.com/auth/drive",)
+
+
+def _gdrive_env(name: str, default: str = "") -> str:
+    """GDRIVE_* z procesu albo PowerShell User/Machine (bez logowania wartości)."""
+    return get_env_value(name) or default
 
 _DRIVE_API_OPTS = {
     "supportsAllDrives": True,
@@ -73,11 +81,11 @@ def versioned_xlsx_upload_name(filename: str, *, stamp: str | None = None) -> st
 
 
 def _load_oauth_credentials():
-    refresh = (os.environ.get("GDRIVE_OAUTH_REFRESH_TOKEN") or "").strip()
+    refresh = _gdrive_env("GDRIVE_OAUTH_REFRESH_TOKEN")
     if not refresh:
         return None
-    client_id = (os.environ.get("GDRIVE_OAUTH_CLIENT_ID") or "").strip()
-    client_secret = (os.environ.get("GDRIVE_OAUTH_CLIENT_SECRET") or "").strip()
+    client_id = _gdrive_env("GDRIVE_OAUTH_CLIENT_ID")
+    client_secret = _gdrive_env("GDRIVE_OAUTH_CLIENT_SECRET")
     if not client_id or not client_secret:
         raise SystemExit(
             "Ustaw GDRIVE_OAUTH_CLIENT_ID i GDRIVE_OAUTH_CLIENT_SECRET "
@@ -109,8 +117,8 @@ def _load_service_account_credentials():
             "Zainstaluj: pip install google-api-python-client google-auth\n" + str(e)
         ) from e
 
-    raw = (os.environ.get("GDRIVE_SERVICE_ACCOUNT_JSON") or "").strip()
-    path = (os.environ.get("GDRIVE_SERVICE_ACCOUNT_FILE") or "").strip()
+    raw = _gdrive_env("GDRIVE_SERVICE_ACCOUNT_JSON")
+    path = _gdrive_env("GDRIVE_SERVICE_ACCOUNT_FILE")
     if raw:
         if raw.startswith("AIza"):
             raise SystemExit(
@@ -136,7 +144,7 @@ def _load_service_account_credentials():
             "Ustaw GDRIVE_SERVICE_ACCOUNT_JSON (treść) lub GDRIVE_SERVICE_ACCOUNT_FILE (ścieżka)."
         )
 
-    impersonate = (os.environ.get("GDRIVE_IMPERSONATE_EMAIL") or "").strip()
+    impersonate = _gdrive_env("GDRIVE_IMPERSONATE_EMAIL")
     if impersonate:
         creds = creds.with_subject(impersonate)
         print(f"Delegacja DWD: upload w imieniu {impersonate}")
@@ -218,7 +226,7 @@ def _resolve_shared_drive_upload_folder(service, preferred_folder_id: str) -> tu
     """
     Zwraca (folder_id, shared_drive_id) do uploadu na Shared Drive.
     """
-    configured_drive = (os.environ.get("GDRIVE_SHARED_DRIVE_ID") or "").strip()
+    configured_drive = _gdrive_env("GDRIVE_SHARED_DRIVE_ID")
     drives = _list_shared_drives(service)
     if configured_drive:
         drive_ids = {d["id"] for d in drives}
@@ -279,7 +287,7 @@ def _resolve_upload_folder(service, folder_id: str, *, use_oauth: bool) -> str:
     except Exception as exc:
         print(f"Nie mozna odczytac folderu {folder_id}: {exc}")
 
-    if (os.environ.get("GDRIVE_IMPERSONATE_EMAIL") or "").strip():
+    if _gdrive_env("GDRIVE_IMPERSONATE_EMAIL"):
         print(f"Upload przez delegacje do folderu {folder_id}")
         return folder_id
 
@@ -392,9 +400,25 @@ def main() -> int:
     )
     parser.add_argument(
         "--folder-id",
-        default=os.environ.get("GDRIVE_FOLDER_ID", GOOGLE_DRIVE_GU_FOLDER_ID),
+        default=_gdrive_env("GDRIVE_FOLDER_ID") or GOOGLE_DRIVE_GU_FOLDER_ID,
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Tylko pokaż folder i pliki, bez uploadu",
     )
     args = parser.parse_args()
+
+    if args.dry_run:
+        data_root = resolve_data_root(args.campaign_dir)
+        w = wyniki_dir(data_root)
+        print(f"DRY-RUN Drive folder={args.folder_id}")
+        print(f"DRY-RUN lokalnie Wyniki={w}")
+        if w.is_dir():
+            for p in sorted(w.iterdir()):
+                if p.is_file():
+                    print(f"  {p.name}")
+        return 0
 
     creds, use_oauth = _load_credentials()
     service, MediaFileUpload = _drive_service(creds)

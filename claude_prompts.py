@@ -133,84 +133,64 @@ def build_page_verify_prompt(
     small_kw = ", ".join(small_company_markers_sample())
     large_kw = ", ".join(large_company_markers_sample())
     return f"""ROLLE
-Du bist Senior-Due-Diligence-Analyst für B2B-Outreach an kleine Generalunternehmer in Deutschland,
-die Lebensmittelmärkte / Filialen NEU BAUEN oder UMBAUEN (Filialbau, Supermarktbau, Marktneubau, Hochbau).
-KEIN Ziel: Ladeneinrichtung, Shopfitting, Innenausbau, Einzelhandels-Betreiber, Portale, Medien.
+Jesteś analitykiem due-diligence B2B. Target: POLSKA firma wykonawcza / wyposażeniowa,
+która REALNIE działa na terenie Niemiec (posadzki, meble sklepowe, Ladenbau, Innenausbau,
+budownictwo, podwykonawstwo — elektryka, HVAC, GK, witryny).
 
-WICHTIG — „Generalunternehmer" steht NICHT immer auf der Website!
-Entscheidend: PROJEKTNACHWEIS für Markt-/Filial-BAU (Schale/Hochbau), nicht nur Innenausstattung.
+Shopfitting / posadzki / wyposażenie sklepów = TAK, to jest cel.
+KEIN Ziel: urzędy, portale, agencje pracy, deweloperzy mieszkaniowi, sieci handlowe jako operatorzy,
+czysto niemieckie GmbH bez polskiego podmiotu, firmy tylko na PL bez śladu pracy w DE.
 
 AUFGABE
-Lies den vollständigen Website-Auszug (alle gecrawlten Unterseiten, markiert mit „=== URL ===").
-Inkl. Bildpfade, alt-Texte, Galerie-Beschriftungen, Karriere-Stellen. Passt die Firma?
-Antworte NUR mit einem JSON-Objekt — kein Markdown, kein Kommentar.
+Przeczytaj cały wyciąg strony (podstrony === URL ===). Pasuje do targetu?
+Odpowiedz TYLKO JSON — bez Markdown.
 
-WAS ZÄHLT ALS NACHWEIS (Referenzen / Portfolio — KEIN fester Tab nötig)
-• Neubau/Umbau/Sanierung eines Marktgebäudes (Filialbau, Supermarktbau, Marktneubau)
-• Fotos/Galerie: Baustelle, Außenansicht Markt, Eröffnung, Rohbau — nicht nur Regale/Möbel
-• Projektbeschreibungen: „Neubau Rewe …", „Umbau Aldi …", „Filialbau für Netto"
-• Karriere mit Auftraggeber einer erlaubten Kette (z. B. Netto Marken-Discount)
+NACHWEIS pracy w DE (wymagany do is_gu=true i has_retail_context=true)
+• Niemcy / Deutschland / landy / referencje DE / zdjęcia budów w DE
+• Lidl, Aldi, Kaufland, Edeka, Rewe, Rossmann, DM, Netto, Penny jako realizacja
+• impresum z PL (sp. z o.o., S.A., adres PL, NIP) + oferta DE
 
-SOFORT is_gu=false / has_retail_context=false
-• Ladeneinrichtung, Shopfitting, Innenausbau, Ladenausstattung, Möbelbau, Store Design
-• Nur Innenausstattung eines Marktes — auch wenn Rewe/Aldi genannt wird
-• Betreiber/Händler (Öffnungszeiten, Prospekt, Filialfinder), Medienportal, Vergabeportal
+SOFORT is_gu=false
+• brak polskiego podmiotu (tylko GmbH DE bez PL)
+• brak jakiegokolwiek tropu DE
+• portal, urząd, agencja pracy, sklep detaliczny (Biedronka/Żabka jako sieć)
 
-ENTSCHEIDUNGSBAUM (in dieser Reihenfolge)
-1) Innenausbau/Shopfitting dominiert → is_gu=false
-2) primary_role = Betreiber/Händler/Medienportal/Ladeneinrichter → is_gu=false
-3) Kein BAU/Auftragnehmer → is_gu=false
-4) Baufirma ja, aber KEIN Markt-/Filial-Bauprojekt → has_retail_context=false
-5) Nur Büro/Wohn ohne Supermarkt/Discounter/Filiale → has_retail_context=false
-6) Passt: is_gu=true, has_retail_context=true, matched_chains nicht leer
-7) Größe → is_small_firm
+ENTSCHEIDUNGSBAUM
+1) Portal/urząd/rekrutacja/handel detaliczny → is_gu=false
+2) Niemieckie-only GmbH bez PL → is_gu=false
+3) Polska firma, ale zero śladu DE → is_gu=false, has_retail_context=false
+4) Polska firma + praca w DE w branży wykonawczej → is_gu=true, has_retail_context=true
+5) Wielkość → is_small_firm
 
-HANDELSKETTE — PFLICHT (Whitelist)
-Erlaubt NUR: {_REQUIRED_CHAINS}
-• has_retail_context=true NUR mit Bauprojekt (Neubau/Umbau Marktgebäude) UND mindestens einer Kette in matched_chains
-• matched_chains: nur Kleinbuchstaben, nur wenn Kette WÖRTLICH als Projekt/Auftraggeber genannt
-• Ohne benannte Kette aus der Whitelist → has_retail_context=false
+HANDELSKETTE (pomocniczo, nie obowiązkowa jeśli jest inny ślad DE)
+Whitelist: {_REQUIRED_CHAINS}
+matched_chains: tylko jeśli sieć WÖRTLICH jako realizacja.
 
-FELD is_small_firm — DU ENTSCHEIDEST (Pflichtfeld)
-Ziel: kleine / regionale Baufirma — KEIN Weltkonzern.
-is_small_firm=true bei z. B.:
-• Familienunternehmen, inhabergeführt, Meisterbetrieb, regional, Mittelstand, GmbH mit einem Standort
-• Typisch < 250 Mitarbeiter — auch wenn „Groep"/„Gruppe"/Muttergesellschaft erwähnt wird
-is_small_firm=false bei z. B.:
-• STRABAG, Hochtief, Goldbeck, Implenia, PORR, börsennotiert, > 500 MA, global player
+is_small_firm=true: sp. z o.o., firma rodzinna, <250 MA, jedna siedziba PL
+is_small_firm=false: Budimex, Strabag, Skanska, giełda, >500 MA, sieć handlowa
 
-KLEIN-INDIZIEN: {small_kw}
-GROSS-INDIZIEN: {large_kw}
+KLEIN: {small_kw}
+GROSS: {large_kw}
 
-FELD is_gu — Bedeutung
-true = Generalunternehmer / Bauunternehmen Hochbau/Filialbau (NICHT Ladeneinrichter).
-
-FELD has_retail_context — Bedeutung
-true = Bauprojekt für Lebensmittelmarkt/Filiale einer Whitelist-Kette.
+is_gu = polska firma wykonawcza z pracą w DE (TAK: shopfitting, posadzki, podwykonawca).
+has_retail_context = ślad obiektów handlowych / DE (markety, drogerie, galerie, gastro).
 
 IM ZWEIFEL: is_gu=false, has_retail_context=false.
 
-HILFS-SCHLÜSSELWÖRTER (nicht alle müssen vorkommen)
-[GU — optional]
-{gu_kw}
-
-[RETAIL / FILIALBAU / PROJEKTE]
-{retail_kw}
-
-[SIECI als Projekt — Pflicht-Whitelist]
-{chain_kw}
-
-[ODRZUĆ wenn dominiert]
-{neg_kw}
+HILFS
+[role] {gu_kw}
+[retail] {retail_kw}
+[sieci] {chain_kw}
+[odrzuć] {neg_kw}
 
 BEISPIELE
-✓ JA: „Filialbau seit 1990" + Galerie Rewe/Aldi Neubau Fotos
-✓ JA: „Referenzprojekte: Kaufland Umbau Halle, Penny Neubau"
-✓ JA: Karriere „Auftraggeber Netto Marken-Discount" + Generalunternehmer Einzelhandelsbau → matched_chains=[netto]
-✗ NEIN: „Körling Interiors — Ladeneinrichtung für Rewe" (Innenausbau)
-✗ NEIN: „Ladenbau Büros, Praxen, Hotels" ohne Marktprojekt mit Whitelist-Kette
-✗ NEIN: GU Einzelhandelsbau ohne Aldi/Rewe/Edeka/Netto/Penny/Kaufland/Norma im Text
-✗ NEIN: STRABAG SE, 77.000 Mitarbeiter → is_small_firm=false
+✓ JA: „Montaż sklepów Lidl w Niemczech" + sp. z o.o. Wrocław
+✓ JA: posadzki żywiczne, referencje Aldi/Kaufland DE
+✓ JA: meble sklepowe, realizacje Rossmann Deutschland
+✗ NEIN: samo GmbH z NRW bez polskiego podmiotu
+✗ NEIN: agencja pracy / OLX / urząd gminy
+✗ NEIN: Biedronka jako sieć handlowa
+✗ NEIN: polski deweloper mieszkań bez DE
 
 FELDER JSON (exakt diese Keys)
 {{
@@ -226,11 +206,9 @@ FELDER JSON (exakt diese Keys)
 }}
 
 REGELN
-• matched_*: nur Begriffe aus dem Auszug (inkl. Bild-URLs/alt) — nichts erfinden
-• matched_retail_keywords: z. B. filialbau, referenz, galerie, neubau, supermarkt, umbau
-• matched_chains: nur Kleinbuchstaben (rewe, aldi, …), nur wenn als Projekt genannt
-• primary_role: Generalunternehmer, Bauunternehmen, Filialbauer, Betreiber, Medienportal, …
-• reason: max. 2 Sätze — welcher Projektnachweis (oder warum abgelehnt)
+• matched_*: tylko z wyciągu — nic nie wymyślaj
+• primary_role: WyposazenieSklepow, Posadzki, Budownictwo, Podwykonawca, Portal, Urzad, AgencjaPracy, SiecHandlowa, …
+• reason: max. 2 zdania
 
 KONTEXT
 {header}
@@ -258,10 +236,10 @@ def build_row_cleanup_prompt(
 Du bist Daten-QA-Leiter vor dem Excel-Export. Dein Output landet 1:1 in der Tabelle „Kontakte".
 Fehlerhafte Zeilen kosten echte B2B-Mails an falsche Empfänger — sei gnadenlos präzise.
 
-ZIELGRUPPE (nur diese Firmen dürfen einen Namen behalten)
-Kleine Generalunternehmer / Bauunternehmen mit Filialbau, Supermarktbau, Neubau oder Umbau von Märkten
-(Aldi, Rewe, Edeka, Netto, Penny, Kaufland, Norma als Projekt-Referenz — keine Ladeneinrichtung).
-KEINE Einzelhandels-Märkte als Betreiber. KEINE Portale. KEINE PDF-Titel. KEINE Städte als „Firmenname".
+ZIELGRUPPE (nur te firmy mogą mieć nazwę)
+Polskie firmy (sp. z o.o., S.A., sp. j., P.H.U.) działające w Niemczech:
+wyposażenie sklepów, posadzki, budownictwo, podwykonawstwo.
+KEINE urzędy, portale, agencje pracy, sieci handlowe, czysto niemieckie GmbH bez PL.
 
 AUFGABE
 Bereinige die Eingabefelder für Excel. Antworte NUR mit einem JSON-Objekt — kein Markdown.
@@ -270,10 +248,11 @@ SCHEMA (exakt, alle Keys, leere Strings erlaubt)
 {{"company_name_clean":"","address":"","phone":"","website":"","bundesland":"","handelsketten":"","url":""}}
 
 ═══ company_name_clean — KILLER-REGELN (höchste Priorität) ═══
-ERLAUBT: Offizieller Firmenname + Rechtsform in EINER Zeile.
-Rechtsform PFLICHT: GmbH, UG, AG, GbR, e.K., KG, OHG, PartG, Co. KG, SE.
-OK: „Müller Filialbau GmbH", „SuS Bau GmbH", „Wiessner Baugeschäft GmbH"
-NICHT OK: „Generalunternehmer Leipzig", „ALDI Neubau Borna", „Gewerbebau", reiner Ladenbau ohne GU
+ERLAUBT: Offizieller Firmenname + polska forma prawna w JEDNEJ linii.
+Forma: sp. z o.o., S.A., sp. j., sp. k., s.c., P.H.U. (GmbH tylko jeśli to polski podmiot z DE).
+OK: „Ergo Store sp. z o.o.", „Posadzki-X S.A."
+NICHT OK: „Generalunternehmer Leipzig", „ALDI Neubau Borna", urząd gminy, portal OLX
+bundesland = województwo polskie siedziby (np. Dolnoslaskie, Wielkopolskie), nie land DE.
 
 SOFORT company_name_clean = "" bei:
 • PDF/Dokument: [PDF], Bebauungsplan, Auswirkungsanalyse, „Seite X von Y"
@@ -330,30 +309,31 @@ def build_contact_extract_prompt(
         priority_keywords=_CONTACT_EXTRACT_TEXT_PRIORITY,
     )
     return f"""ROLLE
-Du bist Kontakt-Rechercheur für B2B-Outreach an kleine Generalunternehmer in Deutschland.
-Deine einzige Aufgabe: E-Mail-Adressen und Telefonnummern aus dem Website-Auszug finden.
+Szukasz kontaktów B2B polskich firm działających w Niemczech.
+Zadanie: e-mail, telefon, imię osoby z impresum — tylko to, co WÖRTLICH jest w tekście.
 
 KONTEXT
 {header}
 
 REGELN (streng)
 • Nur Daten extrahieren, die WÖRTLICH im Auszug stehen — nichts erfinden, nichts raten.
-• Impressum- und Kontaktseiten haben höchste Priorität.
+• Impressum / Kontakt / Dane firmy mają najwyższy priorytet.
 • mailto:-Links und sichtbare @-Adressen zählen.
-• Telefon: deutsche Nummern (+49 oder 0…), keine Fax-Zeilen wenn eine normale Tel.-Zeile existiert.
-• Keine Portale (11880, GelbeSeiten), keine noreply/no-reply, keine PDF-Viewer-Adressen.
-• Local-Part (vor @): 1–50 Zeichen — längere Adressen ignorieren.
-• Wenn nichts gefunden: leere Listen.
+• Telefon: PL (+48) lub DE (+49), bez samego faxu jeśli jest Tel.
+• Keine Portale (OLX, Aleo, 11880), keine noreply/no-reply.
+• Local-Part (vor @): 1–50 Zeichen.
+• contact_first_name: tylko realne imię (Jan, Anna) z impresum/zarządu — bez nazwiska jeśli niepewne.
 
 OUTPUT (nur JSON, kein Markdown)
-{{"company_name":"","emails":[],"phones":[],"impressum_emails":[],"reason":""}}
+{{"company_name":"","emails":[],"phones":[],"impressum_emails":[],"contact_first_name":"","reason":""}}
 
 Felder:
-• company_name — offizieller Firmenname nur wenn klar im Impressum/Kontakt genannt, sonst ""
-• emails — alle gültigen Firmen-E-Mails aus dem Text
-• impressum_emails — Teilmenge von emails, die aus Impressum/Datenschutz/Legal kommen
-• phones — max. 3 eindeutige Telefonnummern
-• reason — max. 1 Satz (z. B. „Impressum info@…" oder „keine Kontakte im Auszug")
+• company_name — oficjalna nazwa z impresum, sonst ""
+• emails — firmowe maile
+• impressum_emails — z impresum/dane firmy
+• phones — max. 3
+• contact_first_name — imię do zwrotu (np. Jan) albo ""
+• reason — max. 1 Satz
 
 WEBSITE-AUSZUG (vollständiger Domain-Crawl)
 {snippet or "(leer)"}
@@ -374,38 +354,40 @@ def build_discovery_terms_prompt(
     retail_kw = ", ".join(retail_context_keywords_sample(max_items=8))
     neg_kw = ", ".join(negative_keywords_sample(max_items=8))
     return f"""ROLLE
-Du generierst Google-Suchanfragen (Serper API) für die Discovery kleiner GU im Filialbau in Deutschland.
-Jede Zeile = eine Suchanfrage. Qualität vor Quantität.
+Generujesz zapytania Google (Serper) do discovery POLSKICH firm, które pracują w Niemczech
+(wyposażenie sklepów, posadzki, budownictwo, podwykonawcy). Miasto = siedziba w PL.
 
 KONTEXT
-Bundesland: {land_str}
-Städte: {city_str}
+Województwo: {land_str}
+Miasta: {city_str}
 
-VORLAGEN (Varianten, {{city}} durch echte Stadt ersetzen)
+VORLAGEN ({{city}} = polskie miasto)
 {templates}
 
 PFLICHT pro Zeile
-• Mindestens ein GU-Marker: {gu_kw}
-• Mindestens eine Handelskette WÖRTLICH: {_REQUIRED_CHAINS} (rotieren — nicht immer Aldi)
-• Retail/Filialbau-Kontext erwünscht: {retail_kw}
+• Branża: wyposażenie sklepów / posadzki / Ladenbau / podwykonawca / budownictwo
+• Znacznik Niemiec: Niemcy albo Deutschland
+• Opcjonalnie sieć: {_REQUIRED_CHAINS} (rotieren)
 • Max {max_term_len} Zeichen
-• Deutsch, keine Nummerierung, keine Anführungszeichen, keine leeren Zeilen
+• Polski (ew. Ladenbau/Innenausbau), bez numeracji, bez cudzysłowów
 
 VERBOTEN
 • {neg_kw}
-• Reines „Bauunternehmen" oder „Ladenbau" OHNE Generalunternehmer/GU/Filialbau-Marker
-• Doppelte oder fast identische Zeilen
+• urzędy, OLX, agencje pracy, Biedronka/Żabka jako operator
+• czyste „Generalunternehmer Filialbau {{miasto DE}}"
+• duplikaty
 {exclude_block}
 
 GUTE BEISPIELE
-Generalunternehmer Filialbau Hannover Aldi markt
-GU Supermarktbau Rewe Neubau Braunschweig
-Generalunternehmer Filialbau {city_str.split(",")[0].strip() if city_str else "Leipzig"} Netto markt
+wyposażenie sklepów Wrocław Niemcy
+posadzki żywiczne Poznań Lidl
+podwykonawca budowa sklepów Katowice Deutschland
+Ladenbau Firma Szczecin Polen
 
 SCHLECHTE BEISPIELE
-Bauunternehmen Gewerbebau Hannover
-Ladenbau Innenausbau München
-REWE Markt Hannover
+Generalunternehmer Filialbau Hannover Aldi markt
+urząd gminy Wrocław
+praca Niemcy agencja Bydgoszcz
 
 OUTPUT
 Genau {terms_requested} Zeilen — eine Anfrage pro Zeile, sonst NICHTS (kein JSON, kein Kommentar).

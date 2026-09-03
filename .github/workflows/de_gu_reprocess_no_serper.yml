@@ -159,7 +159,7 @@ jobs:
       - name: Upload Wyniki to Google Drive
         if: inputs.sync_drive
         env:
-          GDRIVE_FOLDER_ID: "1tP8oUi72t4EHDbE9GnHFdvfNtNsJe4xf"
+          GDRIVE_FOLDER_ID: "1LdIQi0t1fgQMlHwNnvMdPn5lyv1zOqIJ"
           GDRIVE_VERSION_XLSX: "1"
           GDRIVE_SERVICE_ACCOUNT_JSON: ${{ secrets.GDRIVE_SERVICE_ACCOUNT_JSON }}
           GDRIVE_OAUTH_CLIENT_ID: ${{ secrets.GDRIVE_OAUTH_CLIENT_ID }}

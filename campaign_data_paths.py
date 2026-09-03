@@ -3,7 +3,7 @@
 Ścieżki wyników kampanii: cache JSON, Excel, log, wyslane/ (.eml).
 
 Domyślny cel chmury (Google Drive):
-  https://drive.google.com/drive/folders/1tP8oUi72t4EHDbE9GnHFdvfNtNsJe4xf
+  https://drive.google.com/drive/folders/1LdIQi0t1fgQMlHwNnvMdPn5lyv1zOqIJ
 
 Ustaw lokalnie zsynchronizowany folder:
   KANBUD_GOOGLE_DRIVE_GU_PATH=C:\\ścieżka\\do\\folderu\\w\\My Drive
@@ -14,7 +14,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-GOOGLE_DRIVE_GU_FOLDER_ID = "1tP8oUi72t4EHDbE9GnHFdvfNtNsJe4xf"
+GOOGLE_DRIVE_GU_FOLDER_ID = "1LdIQi0t1fgQMlHwNnvMdPn5lyv1zOqIJ"
 GOOGLE_DRIVE_GU_FOLDER_URL = (
     f"https://drive.google.com/drive/folders/{GOOGLE_DRIVE_GU_FOLDER_ID}?usp=drive_link"
 )

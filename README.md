@@ -1,292 +1,98 @@
-# Wyszukiwarka partnerów — kampania GU (bundesweit)
+# Wyszukiwarka partnerów — kampania PL→DE (Hurt Matbud)
 
+Repozytorium: [Bigmax1993/Wyszukiwarka-partnerow](https://github.com/Bigmax1993/Wyszukiwarka-partnerow)
 
+Pipeline: **Serper (PL) → strony www → cache/Excel → maile Hurt Matbud**.
 
-Repozytorium: [Bigmax1993/Wyszukiwarka-partnerow](https://github.com/Bigmax1993/Wyszukiwarka-partnerow) (private)
+**Odbiorcy:** polskie firmy (sp. z o.o. / S.A. / sp. j. / P.H.U. / adres PL / domena `.pl`), które **realnie pracują w Niemczech** — wyposażenie sklepów / Ladenbau, posadzki, budownictwo, podwykonawcy.
 
-
-
-Pipeline: **Serper → strony www → cache/Excel → maile MFG** (Generalunternehmer / Filialbau DE).
-
-
+**Oferta w mailu:** (1) świeże otwarcia lokalizacji w DE (sklepy, markety, restauracje, drogerie, galerie); (2) baza generalnych wykonawców budujących markety w Niemczech.
 
 | Moduł | Plik |
-
 |-------|------|
-
 | Scraper | `de_gu_bauunternehmen_scraper.py` |
+| Województwa + frazy | `pl_wojewodztwa.py`, `de_gu_keywords.py` |
+| Rotacja | `gu_bundesland_rotation.py` → `Wyniki/pl_wojewodztwa_rotation.json` |
+| Filtr PL+DE | `pl_de_company_filter.py` |
+| Mail PL | `hurtmatbud_inquiry_email_pl.py` |
 
-| Frazy per Bundesland | `de_gu_keywords.py` |
-
-| Rotacja landów | `gu_bundesland_rotation.py` |
-
-| Treść maila DE | `mfg_gu_inquiry_email_de.py` |
-
-| Załącznik PPTX | `mfg_gu_email_attachment.py` |
-
-
+Nadawca B2B: `hurtmatbud2@gmail.com` (hasło aplikacji tylko w env / GitHub Secrets, **nie w git**).
+Raport Excel wewnętrzny: `EXCEL_REPORT_TO` (domyślnie `svinchak1993@gmail.com`).
+Excel **Kontakte**: dokładnie **Nazwa firmy | Adres | Numer Telefonu | E-mail**. Szczegóły (województwo, www, URL) na arkuszu **Szczegoly**.
+Drive: [folder wyników](https://drive.google.com/drive/folders/1LdIQi0t1fgQMlHwNnvMdPn5lyv1zOqIJ) — ID `1LdIQi0t1fgQMlHwNnvMdPn5lyv1zOqIJ`.
 
 ## Szybki start (lokalnie)
 
-
-
 ```powershell
-
-git clone https://github.com/Bigmax1993/Wyszukiwarka-partnerow.git
-
-cd Wyszukiwarka-partnerow
-
+cd "C:\Users\svinc\Documents\Wyszukiwarka partnerow"
 pip install -r requirements.txt
-
 $env:KANBUD_PROJECT_ROOT = "$PWD\libs"
 
 python de_gu_bauunternehmen_scraper.py --test
-
+python de_gu_bauunternehmen_scraper.py --test --wojewodztwo Dolnoslaskie
+python de_gu_bauunternehmen_scraper.py --rotation-status
+python de_gu_bauunternehmen_scraper.py --dry-run-email --send-emails-only
 ```
 
-
-
-Pełna bateria testów:
-
-
+Pełna bateria testów (bez live API):
 
 ```powershell
-
-powershell -ExecutionPolicy Bypass -File scripts\RUN_ALL_TESTS.ps1
-
 powershell -ExecutionPolicy Bypass -File scripts\RUN_ALL_TESTS.ps1 -SkipApiLive
-
 ```
 
-| Typ | Folder | Marker pytest |
-|-----|--------|---------------|
-| Jednostkowe | `tests/unit/` | `-m unit` |
-| Integracyjne | `tests/integration/` | `-m "integration and not api_live"` |
-| Regresyjne | `tests/test_gu_discovery_regression.py`, `test_excel_append.py` | unittest |
-| API live | `tests/integration/test_api_keys.py` | `-m api_live` |
+## Rotacja województw
 
-Raport Excel (Gmail): `python scripts/send_excel_gmail.py` / `--dry-run` — poniedziałek 04:30 na GHA (`GU poniedzialek excel email`).
+Jeden województwo na cykl discovery (`--rotate-wojewodztwo`; `--rotate-bundesland` to alias).
 
+Kolejność: Dolnośląskie → Lubuskie → Wielkopolskie → Opolskie → Śląskie → Zachodniopomorskie → Łódzkie → Mazowieckie → Pomorskie → Kujawsko-Pomorskie → Małopolskie → Podkarpackie → Lubelskie → Warmińsko-Mazurskie → Świętokrzyskie → Podlaskie.
 
+```powershell
+python de_gu_bauunternehmen_scraper.py --rotate-wojewodztwo
+python de_gu_bauunternehmen_scraper.py --wojewodztwo Dolnoslaskie
+```
+
+Serper: `gl=pl`, `hl=pl`, frazy po polsku ze znacznikiem Niemiec / Deutschland.
+
+## Maile Hurt Matbud
+
+- Język: polski, imienne (`Szanowny Panie Janie` / `Szanowni Państwo` + nazwa firmy)
+- Claude Sonnet generuje JSON `{subject, greeting, body, used_first_name}`
+- Bez PPTX MFG (`DISABLE_EMAIL_ATTACHMENT=1`)
+- Limit pierwszego LIVE: `MAX_SEND_PER_RUN=20` (dzienny `DAILY_EMAIL_LIMIT` zostaje)
+- SMTP: `smtp.gmail.com:465` gdy nadawca to `@gmail.com`
+- **Nie wysyłaj live**, dopóki dry-run nie jest OK
+
+```powershell
+python de_gu_bauunternehmen_scraper.py --dry-run-email --send-emails-only
+# LIVE (max 20) — tylko po akceptacji dry-run:
+# python de_gu_bauunternehmen_scraper.py --send-emails-only --ignore-send-window
+```
 
 ## Wyniki
 
-
-
-| Plik / folder | Opis |
-
-|---------------|------|
-
-| `Wyniki/de_gu_bauunternehmen_cache.json` | Cache Serper + kontakty (kumulacja tygodniowa) |
-
-| `Wyniki/de_gu_bauunternehmen_kontakte.xlsx` | Excel — **append** (dopisywanie); arkusz **Info** opisuje zasady zapisu |
-
-| `Wyniki/de_gu_bauunternehmen_scraper.log` | Log |
-
-| `Wyniki/de_gu_bundeslaender_rotation.json` | Stan rotacji Bundesland |
-
+| Plik | Opis |
+|------|------|
+| `Wyniki/de_gu_bauunternehmen_cache.json` | Cache Serper + kontakty |
+| `Wyniki/de_gu_bauunternehmen_kontakte.xlsx` | Excel — arkusz Kontakte (4 kolumny) + Szczegoly + Info |
+| `Wyniki/pl_wojewodztwa_rotation.json` | Stan rotacji województw |
 | `wyslane/` | Kopie wysłanych maili (.eml) |
 
-
-
-**Google Drive:** [folder wyników GU](https://drive.google.com/drive/folders/1tP8oUi72t4EHDbE9GnHFdvfNtNsJe4xf) — [`docs/GOOGLE_DRIVE.md`](docs/GOOGLE_DRIVE.md)
-
-
-
-## Uruchomienie scrapera
-
-
+Upload Drive (OAuth / service account z env, nie commituj `secrets/`):
 
 ```powershell
-
-$env:KANBUD_PROJECT_ROOT = "$PWD\libs"
-
-
-
-python de_gu_bauunternehmen_scraper.py --test
-
-python de_gu_bauunternehmen_scraper.py --rotate-bundesland
-
-python de_gu_bauunternehmen_scraper.py --rotation-status
-
-python de_gu_bauunternehmen_scraper.py --backfill-emails-from-cache
-
-python de_gu_bauunternehmen_scraper.py --rebuild-from-cache
-
-python de_gu_bauunternehmen_scraper.py --send-emails-only
-
-python de_gu_bauunternehmen_scraper.py --dry-run-email --send-emails-only
-
+python scripts\gdrive_upload_wyniki.py --campaign-dir . --dry-run
+# prawdziwy upload tylko po Twoim potwierdzeniu (wymaga GDRIVE_OAUTH_* albo service account)
 ```
 
+## Sekrety (GHA i lokalnie)
 
+| Zmienna | Wymagana | Opis |
+|---------|----------|------|
+| `SERPER_API_KEY` | discovery | Serper |
+| `ANTHROPIC_API_KEY` / `CLAUDE_API_KEY` | verify + maile Claude | Anthropic (proces, `.env` albo PowerShell User) |
+| `MAIL_USER` / `MAIL_PASSWORD` | send | Gmail `hurtmatbud2@gmail.com`; hasło: `MAIL_PASSWORD` albo PowerShell User `GMAIL_APP_PASSWORD` |
+| `GDRIVE_OAUTH_*` albo `GDRIVE_SERVICE_ACCOUNT_JSON` / `_FILE` | upload Drive | OAuth / konto usługi (proces, `.env` albo PowerShell User) |
 
-### Rotacja Bundesland (domyślnie — 1 land / piątek)
+`.env` jest w `.gitignore`. Nie wpisuj haseł do plików źródłowych.
 
-
-
-```powershell
-
-python de_gu_bauunternehmen_scraper.py --rotate-bundesland
-
-```
-
-
-
-Kolejność 16 landów: NRW → Bayern → BW → Niedersachsen → Hessen → Sachsen → … (cykl w `gu_bundesland_rotation.py`).
-
-
-
-### Ręcznie wiele landów
-
-
-
-```powershell
-
-python de_gu_bauunternehmen_scraper.py --bundesland NRW,BY,BW
-
-python de_gu_bauunternehmen_scraper.py --run-config run_config\welle_nrw_by_bw.json
-
-```
-
-
-
-## Limity
-
-
-
-| Limit | Wartość |
-
-|-------|---------|
-
-| Serper | 1500 zapytań / dzień |
-
-| E-mail | 300 / dzień kalendarzowy, 2 / domena / dzień (pon 300 + wt 300) |
-
-| 1 Bundesland / tydzień | ~40–60 fraz Serper × 5 dni discovery |
-
-
-
-## Harmonogram tygodnia
-
-
-
-Szczegóły: [`schedule/PLAN_5_DNI.md`](schedule/PLAN_5_DNI.md)
-
-
-
-| Dzień | Godzina (PL) | PC | GitHub Actions |
-
-|-------|--------------|-----|----------------|
-
-| **Poniedziałek** | **17:00** | `run_poniedzialek_discovery.ps1` | `GU discovery` (część 1) |
-| **Wtorek** | **15:00** | `run_wtorek_discovery.ps1` | `GU discovery` (część 2) |
-| **Środa** | **19:00** | `run_sroda_discovery.ps1` | `GU discovery` (część 3) |
-| **Czwartek** | **20:00** | `run_czwartek_discovery.ps1` | `GU discovery` (część 4) |
-| **Piątek** | **16:00** | `run_piatek_discovery.ps1` | `GU discovery` (część 5) |
-
-| **Niedziela** | 06:00 | `run_czwartek.ps1` | `GU niedziela backfill` (~05:30) |
-
-| **Poniedziałek** | **06:00** | — | `Sync wyniki Google Drive` |
-
-| **Poniedziałek** | **07:00** | `run_poniedzialek_prep.ps1` | `GU poniedzialek prep` |
-
-| **Poniedziałek** | **09:00** | `run_poniedzialek_send.ps1` | `GU poniedzialek send` (partia 1) |
-
-| **Wtorek** | **09:00** | `run_wtorek.ps1` | `GU wtorek send` (partia 2) |
-
-
-
-Task Scheduler:
-
-
-
-```powershell
-
-powershell -ExecutionPolicy Bypass -File schedule\register_tasks_5_dni.ps1
-
-```
-
-
-
-Pełny pipeline na GitHub Actions (ręcznie):
-
-
-
-```powershell
-
-powershell -ExecutionPolicy Bypass -File scripts\run_full_pipeline_gha.ps1 -ForceResend
-
-```
-
-
-
-## GitHub Actions
-
-
-
-[`docs/GITHUB_ACTIONS.md`](docs/GITHUB_ACTIONS.md)
-
-
-
-| Secret | Wymagany | Opis |
-
-|--------|----------|------|
-
-| `SERPER_API_KEY` | tak (discovery) | API Serper |
-
-| `ANTHROPIC_API_KEY` | tak (discovery + backfill) | Claude API |
-
-| `CLAUDE_MODEL_FAST` | opcjonalny | Haiku — frazy Serper, cleanup Excel (domyślnie `claude-haiku-4-5`) |
-
-| `CLAUDE_MODEL_VERIFY` | opcjonalny | Sonnet — weryfikacja www, maile z HTML (domyślnie `claude-sonnet-4-6`) |
-
-| `MAIL_USER`, `MAIL_PASSWORD` | tak (pon+wt) | SMTP + IMAP |
-
-| `GDRIVE_OAUTH_*` | zalecany | Upload wyników na „Mój dysk” |
-
-| `GDRIVE_SERVICE_ACCOUNT_JSON` | opcjonalny | Konto usługi (Shared Drive) |
-
-
-
-## Maile MFG
-
-
-
-- Treść: `mfg_gu_inquiry_email_de.py` (tylko niemiecki)
-
-- Załącznik: [Google Slides](https://docs.google.com/presentation/d/1kBnp5x0pdgXZSPzVte9e92IUgn2A5gSe/edit) → PPTX (`mfg_gu_email_attachment.py`)
-
-- Na GitHub Actions: `assets/campaign/MFG_Referenzliste_Einzelhandel.pptx` (podmień po zmianie Slides)
-
-- Cc: tylko z `MAIL_CC` w `.env` — **bez** automatycznego `office@mfg-fliesen.de`
-
-
-
-## Struktura repo
-
-
-
-```
-
-├── de_gu_bauunternehmen_scraper.py
-
-├── gu_bundesland_rotation.py
-
-├── libs/
-
-├── schedule/           # PLAN_5_DNI.md, register_tasks_5_dni.ps1
-
-├── run_config/
-
-├── assets/campaign/    # PPTX na runnerze GitHub
-
-├── scripts/            # gdrive_*, run_full_pipeline_gha.ps1, RUN_ALL_TESTS.ps1
-
-├── .github/workflows/
-
-└── docs/
-
-```
-
-
+Szczegóły: [`docs/GITHUB_ACTIONS.md`](docs/GITHUB_ACTIONS.md), [`docs/GOOGLE_DRIVE.md`](docs/GOOGLE_DRIVE.md), [`schedule/PLAN_5_DNI.md`](schedule/PLAN_5_DNI.md)

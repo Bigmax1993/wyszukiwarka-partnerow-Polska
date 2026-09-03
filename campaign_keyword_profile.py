@@ -12,7 +12,6 @@ from de_gu_keywords import (
 )
 from retail_store_builder_filter import (
     FILIALBAU_SPECIALIST_MARKERS,
-    INTERIOR_FITOUT_MARKERS,
     NON_GU_ROLE_EXCLUSION_MARKERS,
     REQUIRED_RETAIL_CHAIN_KEYWORDS,
     RETAIL_STORE_BUILD_MARKERS,
@@ -28,12 +27,11 @@ REJECT_PRIMARY_ROLES = frozenset(
         "Medienportal",
         "Architekturbüro",
         "Planungsbüro",
-        "Subunternehmer",
-        "Nachunternehmer",
-        "Ladeneinrichter",
-        "Innenausstatter",
-        "Shopfitter",
-        "Ladenausstatter",
+        "Urzad",
+        "Portal",
+        "AgencjaPracy",
+        "SiecHandlowa",
+        "DeweloperMieszkaniowy",
         "Sonstiges",
     }
 )
@@ -71,35 +69,35 @@ def retail_chain_keywords_sample(*, max_items: int = 12) -> list[str]:
 
 def small_company_markers_sample(*, max_items: int = 10) -> list[str]:
     return [
-        "familienunternehmen",
-        "familienbetrieb",
-        "inhabergeführt",
-        "meisterbetrieb",
-        "mittelständisch",
-        "regional tätig",
-        "vor ort",
-        "kleinunternehmen",
-        "handwerksbetrieb",
-        "ortsansässig",
+        "firma rodzinna",
+        "sp. z o.o.",
+        "s.a.",
+        "zakład",
+        "realizacje niemcy",
+        "montaż",
+        "podwykonawca",
+        "średnie przedsiębiorstwo",
+        "siedziba polska",
+        "brygady niemcy",
     ][:max_items]
 
 
 def large_company_markers_sample(*, max_items: int = 14) -> list[str]:
     return [
-        "konzern",
+        "koncern",
         "holding",
-        "weltweit tätig",
-        "börsennotiert",
+        "giełda",
+        "budimex",
+        "strabag",
+        "hochtief",
+        "skanska",
+        "porr",
+        "goldbeck",
+        "ponad 500 pracowników",
         "global player",
-        "über 500 mitarbeiter",
-        "über 1.000 mitarbeiter",
-        "STRABAG",
-        "Hochtief",
-        "Goldbeck",
-        "Implenia",
-        "PORR",
-        "Zech Group",
-        "Bilfinger",
+        "sieć handlowa",
+        "biedronka",
+        "żabka",
     ][:max_items]
 
 
@@ -108,8 +106,11 @@ def negative_keywords_sample(*, max_items: int = 14) -> list[str]:
     out: list[str] = []
     for item in (
         *NON_GU_ROLE_EXCLUSION_MARKERS,
-        *INTERIOR_FITOUT_MARKERS,
         *SERPER_NEGATIVE_TERMS[:20],
+        "agencja pracy",
+        "olx",
+        "urząd",
+        "deweloper mieszkaniowy",
     ):
         key = item.strip().lower()
         if key and key not in seen:

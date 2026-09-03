@@ -14,9 +14,9 @@ class TestDeGuKeywords:
     def test_sachsen_discovery_terms(self):
         from de_gu_keywords import build_discovery_terms
 
-        terms = build_discovery_terms(["Sachsen"], max_terms=96)
+        terms = build_discovery_terms(["Dolnoslaskie"], max_terms=96)
         assert len(terms) >= 10
-        assert any("Sachsen" in t or "Deutschland" in t for t in terms)
+        assert any("Niemcy" in t or "Deutschland" in t or "Wrocław" in t for t in terms)
 
     def test_all_bundeslaender_count(self):
         from de_gu_keywords import BUNDESLAND_CONFIG

@@ -11,9 +11,9 @@ import pytest
 
 pytestmark = pytest.mark.integration
 
-_GU_SNIPPET = (
-    "Generalunternehmer Filialbau Supermarkt Neubau Rewe ÔÇö "
-    "Referenzprojekt realisiert."
+_PL_SNIPPET = (
+    "Wyposażenie sklepów montaż Lidl Niemcy — "
+    "realizacje Deutschland referencje."
 )
 
 
@@ -28,7 +28,9 @@ def _pipeline_row(url: str, name: str, email: str, chain: str) -> dict:
         "is_small_firm": True,
         "retail_chains_found": chain,
         "verification_reason": "claude:test",
-        "page_snippet": _GU_SNIPPET,
+        "page_snippet": _PL_SNIPPET,
+        "www": url,
+        "adres": "Wrocław, Polska",
     }
 
 
@@ -39,10 +41,10 @@ class TestExcelPipelineIntegration:
         with tempfile.TemporaryDirectory() as tmp:
             xlsx = Path(tmp) / "kontakte.xlsx"
             rows_existing = [
-                _pipeline_row("https://alt.de", "Alt GmbH", "alt@alt.de", "rewe")
+                _pipeline_row("https://alt.pl", "Alt sp. z o.o.", "alt@alt.pl", "lidl")
             ]
             rows_new = [
-                _pipeline_row("https://neu.de", "Neu GmbH", "neu@neu.de", "aldi")
+                _pipeline_row("https://neu.pl", "Neu sp. z o.o.", "neu@neu.pl", "aldi")
             ]
             logger = scraper.setup_logging()
             scraper.save_excel(rows_existing, xlsx, logger, cache={})
@@ -53,13 +55,13 @@ class TestExcelPipelineIntegration:
 
             with pd.ExcelFile(xlsx) as book:
                 df = pd.read_excel(book, sheet_name="Kontakte")
-            urls = {
+            mails = {
                 str(u).strip()
-                for u in df["URL"].fillna("").tolist()
+                for u in df["E-mail"].fillna("").tolist()
                 if str(u).strip()
             }
-            assert "https://alt.de" in urls
-            assert "https://neu.de" in urls
+            assert "alt@alt.pl" in mails
+            assert "neu@neu.pl" in mails
             del df
             gc.collect()
 

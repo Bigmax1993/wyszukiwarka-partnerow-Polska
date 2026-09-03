@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Rotacja Bundesländer — jeden land na cykl discovery (np. piątek).
-
-Stan: Wyniki/de_gu_bundeslaender_rotation.json
+Rotacja województw PL — jedno województwo na cykl discovery.
+Stan: Wyniki/pl_wojewodztwa_rotation.json
 """
 from __future__ import annotations
 
@@ -12,11 +11,13 @@ from pathlib import Path
 from typing import Any
 
 from de_gu_keywords import BUNDESLAND_CONFIG, configure_campaign_bundeslaender
+from pl_wojewodztwa import display_wojewodztwo
 
-# Kolejność fal (duże rynki → mniejsze landy)
 BUNDESLAND_ROTATION_ORDER: tuple[str, ...] = tuple(BUNDESLAND_CONFIG.keys())
+WOJEWODZTWO_ROTATION_ORDER = BUNDESLAND_ROTATION_ORDER
 
-STATE_FILENAME = "de_gu_bundeslaender_rotation.json"
+STATE_FILENAME = "pl_wojewodztwa_rotation.json"
+LEGACY_STATE_FILENAME = "de_gu_bundeslaender_rotation.json"
 DEFAULT_MIN_CONTACTS_SINGLE_LAND = 20
 
 
@@ -30,7 +31,11 @@ def _empty_state() -> dict[str, Any]:
 
 def load_rotation_state(path: Path) -> dict[str, Any]:
     if not path.exists():
-        return _empty_state()
+        legacy = path.parent / LEGACY_STATE_FILENAME
+        if legacy.exists() and path.name == STATE_FILENAME:
+            path = legacy
+        else:
+            return _empty_state()
     try:
         with open(path, encoding="utf-8") as f:
             data = json.load(f)
@@ -56,6 +61,9 @@ def peek_next_bundesland(state: dict[str, Any] | None = None) -> str:
     return BUNDESLAND_ROTATION_ORDER[idx]
 
 
+peek_next_wojewodztwo = peek_next_bundesland
+
+
 def apply_rotation_to_module(
     module,
     wyniki_dir: Path,
@@ -63,7 +71,6 @@ def apply_rotation_to_module(
     min_contacts: int = DEFAULT_MIN_CONTACTS_SINGLE_LAND,
     max_discovery_terms: int = 120,
 ) -> tuple[str, dict[str, Any], Path]:
-    """Wybiera bieżący land (bez przesunięcia indeksu) i konfiguruje scraper."""
     state_path = rotation_state_path(wyniki_dir)
     state = load_rotation_state(state_path)
     land = peek_next_bundesland(state)
@@ -82,13 +89,13 @@ def commit_rotation_after_run(
     *,
     run_date: date | None = None,
 ) -> str:
-    """Po udanym discovery przesuwa rotację na następny land (≥20 retail_verified)."""
     idx = int(state.get("next_index", 0)) % len(BUNDESLAND_ROTATION_ORDER)
     if BUNDESLAND_ROTATION_ORDER[idx] != land:
         land = BUNDESLAND_ROTATION_ORDER[idx]
     history = list(state.get("history") or [])
     history.append(
         {
+            "wojewodztwo": land,
             "land": land,
             "index": idx,
             "at": (run_date or date.today()).isoformat(),
@@ -107,7 +114,7 @@ def format_rotation_status(wyniki_dir: Path) -> str:
     nxt_idx = int(state.get("next_index", 0))
     nxt = BUNDESLAND_ROTATION_ORDER[(nxt_idx + 1) % len(BUNDESLAND_ROTATION_ORDER)]
     return (
-        f"Bieżący land (ten tydzień): {current} | "
-        f"następny po zakończeniu: {nxt} | "
+        f"Bieżące województwo (ten tydzień): {display_wojewodztwo(current)} | "
+        f"następne po zakończeniu: {display_wojewodztwo(nxt)} | "
         f"indeks={nxt_idx}/{len(BUNDESLAND_ROTATION_ORDER)}"
     )

@@ -11,7 +11,7 @@ $ErrorActionPreference = "Stop"
 $Root = Split-Path $PSScriptRoot -Parent
 Set-Location $Root
 $Repo = "Bigmax1993/Wyszukiwarka-partnerow"
-$DriveFolder = "1tP8oUi72t4EHDbE9GnHFdvfNtNsJe4xf"
+$DriveFolder = "1LdIQi0t1fgQMlHwNnvMdPn5lyv1zOqIJ"
 
 # Ta sama kolejnosc co .github/workflows/sync-google-drive.yml
 $ArtifactOrder = @(

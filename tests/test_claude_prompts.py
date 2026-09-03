@@ -14,19 +14,25 @@ from claude_prompts import (
 
 class TestClaudePrompts(unittest.TestCase):
     def test_page_verify_prompt_structure(self):
-        p = build_page_verify_prompt("Test GmbH", "https://test.de", "Filialbau Rewe")
+        p = build_page_verify_prompt("Test sp. z o.o.", "https://test.pl", "posadzki Lidl Niemcy")
         self.assertIn("ENTSCHEIDUNGSBAUM", p)
-        self.assertIn("NICHT immer auf der Website", p)
-        self.assertIn("Fotos/Galerie", p)
         self.assertIn("is_small_firm", p)
-        self.assertIn("Familienunternehmen", p)
         self.assertIn("is_gu", p)
-        self.assertIn("Test GmbH", p)
-        self.assertIn("rewe", p.lower())
-        self.assertIn("Whitelist", p)
-        self.assertIn("Auftraggeber Netto", p)
-        self.assertIn("norma", p.lower())
+        self.assertIn("Test sp. z o.o.", p)
+        self.assertIn("shopfitting", p.lower())
+        self.assertIn("sp. z o.o.", p.lower())
         self.assertNotIn("IM ZWEIFEL: FOR TRUE", p)
+
+    def test_discovery_terms_prompt_count(self):
+        p = build_discovery_terms_prompt(
+            ["Dolnoslaskie"],
+            city_str="Wrocław, Legnica",
+            land_str="Dolnośląskie",
+            terms_requested=5,
+        )
+        self.assertIn("Genau 5 Zeilen", p)
+        self.assertIn("Niemcy", p)
+        self.assertIn("wyposażenie", p.lower())
 
     def test_prioritize_page_text_puts_retail_lines_first(self):
         long_tail = "x " * 5000
@@ -46,7 +52,7 @@ class TestClaudePrompts(unittest.TestCase):
         self.assertIn("company_name_clean", p)
         self.assertIn("handelsketten", p)
         self.assertIn("KILLER-REGELN", p)
-        self.assertIn("Sachsen, Bayern", p)
+        self.assertIn("sp. z o.o.", p.lower())
 
     def test_contact_extract_prompt_schema(self):
         p = build_contact_extract_prompt(
@@ -55,19 +61,7 @@ class TestClaudePrompts(unittest.TestCase):
         self.assertIn("impressum_emails", p)
         self.assertIn("WÖRTLICH", p)
         self.assertIn("info@bau.de", p)
-
-    def test_discovery_terms_prompt_count(self):
-        p = build_discovery_terms_prompt(
-            ["Sachsen"],
-            city_str="Leipzig, Dresden",
-            land_str="Sachsen",
-            terms_requested=5,
-        )
-        self.assertIn("Genau 5 Zeilen", p)
-        self.assertIn("Generalunternehmer", p)
-        self.assertIn("aldi, rewe, edeka", p.lower())
-        self.assertIn("lidl", p.lower())
-        self.assertIn("rotieren", p.lower())
+        self.assertIn("contact_first_name", p)
 
     def test_email_prompts_json_only(self):
         de = build_custom_email_prompt_de("Hallo", "Firma GmbH")

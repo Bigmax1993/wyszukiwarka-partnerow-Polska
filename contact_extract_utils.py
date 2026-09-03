@@ -76,6 +76,9 @@ def parse_contact_extract_response(text: str) -> dict:
 
     company_name = " ".join(str(data.get("company_name") or "").split()).strip()
     reason = str(data.get("reason") or "").strip()
+    first = " ".join(str(data.get("contact_first_name") or "").split()).strip()
+    if first and not re.match(r"^[A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż\-]{2,30}$", first):
+        first = ""
     company_names = [company_name] if company_name else []
     return {
         "company_name": company_name,
@@ -83,5 +86,6 @@ def parse_contact_extract_response(text: str) -> dict:
         "emails": emails,
         "impressum_emails": impressum_emails,
         "phones": phones,
+        "contact_first_name": first,
         "reason": reason,
     }

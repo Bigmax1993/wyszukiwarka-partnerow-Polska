@@ -31,6 +31,8 @@ def merge_claude_contacts_into_collected(collected: dict, parsed: dict) -> dict:
 
     if parsed.get("company_name") and not out.get("company_name"):
         out["company_name"] = parsed["company_name"]
+    if parsed.get("contact_first_name"):
+        out["contact_first_name"] = parsed["contact_first_name"]
 
     out["emails"] = emails
     out["impressum_emails"] = impressum_emails

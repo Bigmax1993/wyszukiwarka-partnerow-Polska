@@ -156,6 +156,12 @@ NON_COMMERCIAL_DOMAIN_MARKERS = (
 
 # Nazwa / tytuł Serper (bez formy prawnej = często urząd/instytucja)
 NON_COMMERCIAL_NAME_MARKERS = (
+    "urząd ",
+    "urzad ",
+    "gmina ",
+    "starostwo",
+    "miasto ",
+    "powiat ",
     "stadt ",
     "stadt,",
     "gemeinde ",
@@ -243,7 +249,9 @@ NON_COMMERCIAL_NAME_MARKERS = (
 )
 
 _COMMERCIAL_LEGAL_FORM = re.compile(
-    r"(?:GmbH|UG(?:\s*\(haftungsbeschränkt\))?|AG|GbR|e\.?\s*K\.?|KG|OHG|PartG|Co\.\s*KG|mbH|SE)\b",
+    r"(?:sp(?:ółka|olka)?\s*z\s*o\.?\s*o\.?|s\.?\s*a\.?\b|sp\.\s*j\.?|sp\.\s*k\.?"
+    r"|s\.\s*c\.?|p\.?\s*h\.?\s*u\.?"
+    r"|GmbH|UG(?:\s*\(haftungsbeschränkt\))?|AG|GbR|e\.?\s*K\.?|KG|OHG|PartG|Co\.\s*KG|mbH|SE)\b",
     re.IGNORECASE,
 )
 
@@ -466,6 +474,9 @@ def is_valid_commercial_company_contact(
         return False
     text = " ".join((name or "").split()).strip()
     if _COMMERCIAL_LEGAL_FORM.search(text):
+        return True
+    host = _normalize_host(url)
+    if host.endswith(".pl"):
         return True
     email_low = (email or "").strip().lower()
     if not email_low or "@" not in email_low:

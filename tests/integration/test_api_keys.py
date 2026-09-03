@@ -13,7 +13,12 @@ pytestmark = pytest.mark.integration
 
 
 def _env(key: str) -> str:
-    return (os.environ.get(key) or "").strip()
+    try:
+        from scraper_env import get_env_value
+
+        return get_env_value(key)
+    except Exception:
+        return (os.environ.get(key) or "").strip()
 
 
 @pytest.mark.api_live

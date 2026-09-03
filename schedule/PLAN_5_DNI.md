@@ -1,7 +1,8 @@
 # Plan tygodniowy: poniedziałek–piątek discovery → niedziela → poniedziałek → wtorek
 
-Jeden **obrót** na **jedną falę** (1 Bundesland / tydzień, rotacja `--rotate-bundesland`).
-Wysyłka **pon 09:00** + **wt 09:00** (2×300 maili/dzień).
+Jeden **obrót** na **jedno województwo PL** na tydzień (`--rotate-wojewodztwo`).
+Wysyłka B2B: max **20** maili na run (`MAX_SEND_PER_RUN`), Gmail `hurtmatbud2@gmail.com`.
+Najpierw zawsze `--dry-run-email --send-emails-only`.
 
 ## Cykl tygodniowy
 
@@ -40,8 +41,8 @@ Tydzień N (przetwarzanie + wysyłka poprzedniej fali):
 | **Niedziela 05:30** | Verify www + backfill e-maili + Excel (`de-gu-wyniki-thu`) z piątkowego `pi` |
 | **Poniedziałek 06:00** | Upload Excel na Drive (artefakt `thu`) |
 | **Poniedziałek 07:00** | Rebuild Excel z cache (`de-gu-wyniki-mon`), **bez wysyłki** |
-| **Poniedziałek 09:00** | Wysyłka partia 1 (max **300**, okno **8–18** Berlin) |
-| **Wtorek 09:00** | Wysyłka partia 2 (kolejne **300** + zaległe) |
+| **Poniedziałek 09:00** | Wysyłka Hurt Matbud (max **20** / run, `MAX_SEND_PER_RUN`) |
+| **Wtorek 09:00** | Kolejna partia (też max **20** / run), tylko po OK dry-run |
 
 ## Task Scheduler (Windows)
 

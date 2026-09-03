@@ -1,41 +1,24 @@
-# GitHub Actions — kampania GU
-
-
+# GitHub Actions — kampania PL→DE (Hurt Matbud)
 
 Repozytorium: [Wyszukiwarka-partnerow](https://github.com/Bigmax1993/Wyszukiwarka-partnerow)
 
-
-
 ## Workflowy
 
-
-
 | Workflow | Plik | Trigger | Co robi |
-
 |----------|------|---------|---------|
-
 | **Tests** | `tests.yml` | push, PR | pytest unit + integracja + regresja + API live |
-
 | **CI Deploy** | `ci-deploy.yml` | push | smoke + walidacja secretów + dry-run maili |
-
-| **GU discovery** | `de_gu_pi.yml` | cron, ręcznie | Discovery pon–pt (max 12 h/run) → `de-gu-wyniki-pi` |
-
-| **GU niedziela backfill** | `de_gu_thu.yml` | cron, ręcznie | Backfill + Excel → `de-gu-wyniki-thu` |
-
-| **GU poniedzialek prep** | `de_gu_mon.yml` | cron, ręcznie | Rebuild Excel → `de-gu-wyniki-mon` |
-| **GU poniedzialek excel email** | `de_gu_mon_excel_email.yml` | cron, ręcznie | Excel na Gmail (04:30 PL) |
-
-| **GU poniedzialek send** | `de_gu_tue.yml` | cron, ręcznie | Wysyłka partia 1 (do 300) → `de-gu-wyniki-tue` |
-
-| **GU wtorek send** | `de_gu_fri.yml` | ręcznie (pominięty cron/chain) | Wysyłka partia 2 → `de-gu-wyniki-fri` |
-
-| **Sync wyniki Google Drive** | `sync-google-drive.yml` | cron pon 06:00 PL, ręcznie | Upload `Wyniki/` na Drive |
-
-
+| **Discovery** | `de_gu_pi.yml` | cron, ręcznie | Discovery pon–pt → `de-gu-wyniki-pi` |
+| **Niedziela backfill** | `de_gu_thu.yml` | cron, ręcznie | Backfill + Excel → `de-gu-wyniki-thu` |
+| **Poniedziałek prep** | `de_gu_mon.yml` | cron, ręcznie | Rebuild Excel → `de-gu-wyniki-mon` |
+| **Poniedziałek excel email** | `de_gu_mon_excel_email.yml` | cron, ręcznie | Excel na Gmail (04:30 PL) |
+| **Poniedziałek send** | `de_gu_tue.yml` | cron, ręcznie | Wysyłka Hurt Matbud (max 20) → `de-gu-wyniki-tue` |
+| **Wtorek send** | `de_gu_fri.yml` | ręcznie | Kolejna partia (max 20) → `de-gu-wyniki-fri` |
+| **Sync Google Drive** | `sync-google-drive.yml` | cron pon 06:00 PL, ręcznie | Upload `Wyniki/` na Drive `1LdIQi0t1fgQMlHwNnvMdPn5lyv1zOqIJ` |
 
 ## Harmonogram cron (Europe/Warsaw)
 
-Harmonogram GHA jest **aktywny cały rok** (`gu-gha-window-guard` zwraca `active=true` dla crona).
+`gu-gha-window-guard` zwraca `active=true` (brak martwego okna dat).
 
 | Dzień | Workflow | Cron | Godzina PL |
 |-------|----------|------|------------|
@@ -47,125 +30,55 @@ Harmonogram GHA jest **aktywny cały rok** (`gu-gha-window-guard` zwraca `active
 | **Niedziela** | backfill | `30 5 * * 0` | **05:30** |
 | **Poniedziałek** | excel email | `30 4 * * 1` | **04:30** |
 | **Poniedziałek** | prep | `0 7 * * 1` | **07:00** |
+| **Poniedziałek** | send | `0 9 * * 1` | **09:00** |
 
+Workflowy send: Gmail `smtp.gmail.com:465`, `DISABLE_EMAIL_ATTACHMENT=1`, `MAX_SEND_PER_RUN=20`. Najpierw lokalnie `--dry-run-email`.
 
-
-Wysyłka w oknie **8–18** czasu berlińskiego (bez `DISABLE_SEND_WINDOW` w workflowach send).
-
-
-
-## Sekrety
-
-
+## Sekrety (repo GitHub, nie hardcode)
 
 | Secret | Wymagany | Opis |
-
 |--------|----------|------|
-
 | `SERPER_API_KEY` | discovery | API Serper |
+| `ANTHROPIC_API_KEY` | discovery + backfill + maile Claude | Anthropic |
+| `MAIL_USER` | send | `hurtmatbud2@gmail.com` |
+| `MAIL_PASSWORD` | send | hasło aplikacji Gmail (nie zwykłe hasło) |
+| `GDRIVE_OAUTH_CLIENT_ID` | sync Drive (My Drive) | OAuth Desktop |
+| `GDRIVE_OAUTH_CLIENT_SECRET` | sync Drive | OAuth |
+| `GDRIVE_OAUTH_REFRESH_TOKEN` | sync Drive | OAuth |
+| `GDRIVE_SERVICE_ACCOUNT_JSON` | sync Drive (Shared Drive) | JSON konta usługi (alternatywa dla OAuth) |
 
-| `ANTHROPIC_API_KEY` | discovery + backfill | Claude API |
-
-Modele Claude (domyślnie w kodzie, opcjonalnie env):
+Modele Claude (opcjonalnie env):
 
 | Zadanie | Tier | Domyślny model | Env |
 |---------|------|----------------|-----|
 | Frazy Serper, cleanup Excel | `fast` | `claude-haiku-4-5` | `CLAUDE_MODEL_FAST` |
-| Weryfikacja www, wyciąganie maili | `verify` | `claude-sonnet-4-6` | `CLAUDE_MODEL_VERIFY` (lub legacy `CLAUDE_MODEL`) |
+| Weryfikacja www, treść maila | `verify` | `claude-sonnet-4-6` | `CLAUDE_MODEL_VERIFY` |
 
-Setup OAuth: `python scripts/gdrive_oauth_setup.py` — szczegóły w [`GOOGLE_DRIVE.md`](GOOGLE_DRIVE.md).
-
-
+Setup OAuth Drive: `python scripts/gdrive_oauth_setup.py` — [`GOOGLE_DRIVE.md`](GOOGLE_DRIVE.md).
 
 ## Artifacty
 
-
-
 ```
-
 pon→pi | wt→pi | sro→pi | czw→pi | pt→pi → niedziela→thu → sync Drive → pon prep→mon → pon send→tue → wt send→fri
-
 ```
 
+**Sync Drive** (pon 06:00 PL) pobiera **`de-gu-wyniki-thu`**. Folder: `1LdIQi0t1fgQMlHwNnvMdPn5lyv1zOqIJ`.
 
-
-Poniedziałek 17:00 (discovery): `de-gu-wyniki-fri` → `de-gu-wyniki-pi` (nowy tydzień). Wtorek–piątek: kontynuacja z `pi`. Niedziela backfill: najnowszy `de-gu-wyniki-pi` (piątek). Poniedziałek rano: prep (07:00) przed wysyłką (09:00); wieczorem (17:00) start kolejnego tygodnia discovery.
-
-**Sync Drive** (pon 06:00 PL) pobiera **`de-gu-wyniki-thu`** z niedzielnego backfillu — kolejność: `thu` → `mon` → `tue` → `fri`. Nie używa `fri`/`tue` z poprzedniej wysyłki, dopóki istnieje `thu`.
-
-
-
-## Załącznik PPTX na runnerze
-
-
-
-Workflowy send ustawiają:
-
-
-
-`MFG_EMAIL_ATTACHMENT_PATH=assets/campaign/MFG_Referenzliste_Einzelhandel.pptx`
-
-
-
-Przed wysyłką workflow **pobiera świeży PPTX** ze Slides (`scripts/export_mfg_slides_attachment.py`).  
-Źródło: [Google Slides MFG](https://docs.google.com/presentation/d/1kBnp5x0pdgXZSPzVte9e92IUgn2A5gSe/edit) (OAuth `GDRIVE_OAUTH_*` na GHA).
-
-
+Maile **bez** PPTX MFG.
 
 ## Ręczne uruchomienie
 
-
-
-Pełny cykl (PC, czeka na każdy krok). Przy **timeout 720 min** discovery (status failure) skrypt **kontynuuje**, jeśli run zapisał artefakt `de-gu-wyniki-pi` (`-StrictDiscovery` = stare zachowanie, przerwij):
-
-
-
 ```powershell
-
 powershell -ExecutionPolicy Bypass -File scripts\run_full_pipeline_gha.ps1 -ForceResend
-
 ```
 
-
-
-Pojedyncze kroki (`gh`):
-
-
-
 ```powershell
-
 gh workflow run "GU discovery" -R Bigmax1993/Wyszukiwarka-partnerow
 gh workflow run "GU discovery" -R Bigmax1993/Wyszukiwarka-partnerow -f discovery_phase=mon
-gh workflow run "GU discovery" -R Bigmax1993/Wyszukiwarka-partnerow -f discovery_phase=tue
-gh workflow run "GU discovery" -R Bigmax1993/Wyszukiwarka-partnerow -f discovery_phase=wed
-gh workflow run "GU discovery" -R Bigmax1993/Wyszukiwarka-partnerow -f discovery_phase=thu
-gh workflow run "GU discovery" -R Bigmax1993/Wyszukiwarka-partnerow -f discovery_phase=fri
-gh workflow run "GU discovery" -R Bigmax1993/Wyszukiwarka-partnerow -f resume_artifact_run_id=RUN_ID
-
 gh workflow run "GU niedziela backfill" -R Bigmax1993/Wyszukiwarka-partnerow
-
 gh workflow run "Sync wyniki Google Drive" -R Bigmax1993/Wyszukiwarka-partnerow
-
-gh workflow run "GU poniedzialek prep" -R Bigmax1993/Wyszukiwarka-partnerow
-
-gh workflow run "GU poniedzialek excel email" -R Bigmax1993/Wyszukiwarka-partnerow
-
 gh workflow run "GU poniedzialek excel email" -R Bigmax1993/Wyszukiwarka-partnerow -f dry_run=true
-
-gh workflow run "GU poniedzialek send" -R Bigmax1993/Wyszukiwarka-partnerow -f force_resend=true
-
-gh workflow run "GU wtorek send" -R Bigmax1993/Wyszukiwarka-partnerow -f force_resend=true
-
+gh workflow run "GU poniedzialek send" -R Bigmax1993/Wyszukiwarka-partnerow
 ```
 
-
-
-Kolejność: discovery (pon–pt) → backfill → sync Drive → prep → pon send → wt send.
-
-Po piątkowym discovery (ręcznie):
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts\resume_pipeline_after_pi.ps1 -PiRunId RUN_ID
-```
-
-
+Kolejność: discovery (pon–pt) → backfill → sync Drive → prep → send. Najpierw dry-run maili lokalnie.

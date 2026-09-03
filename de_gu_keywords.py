@@ -1,12 +1,23 @@
 # -*- coding: utf-8 -*-
 """
-Słowniki GU / Filialbau — kampania bundesweit (całe Niemcy).
-Frazy Serper per Bundesland; wspólne słowniki www z de_ost_keywords.
+Słowniki kampanii PL→DE (Hurt Matbud).
+BUNDESLAND_CONFIG = województwa PL (alias kompatybilności ze scraperem).
 """
 from __future__ import annotations
 
 import importlib.util
 from pathlib import Path
+
+from pl_wojewodztwa import (
+    CHAIN_SIMPLE_TERM_TEMPLATES,
+    RETAIL_CHAINS_ROTATION,
+    SERPER_NEGATIVE_TERMS as _PL_SERPER_NEGATIVE,
+    SIMPLE_TERM_TEMPLATES,
+    TERM_TEMPLATES,
+    WOJEWODZTWO_CONFIG,
+    display_wojewodztwo,
+    normalize_wojewodztwo_key,
+)
 
 _here = Path(__file__).resolve().parent
 _ost_kw_path = _here / "de_ost_keywords.py"
@@ -27,186 +38,37 @@ RETAIL_REFERENCE_KEYWORDS = _ost.RETAIL_REFERENCE_KEYWORDS
 RETAIL_URL_PRIORITY_KEYWORDS = _ost.RETAIL_URL_PRIORITY_KEYWORDS
 IMPRESSUM_GUESS_PATHS = _ost.IMPRESSUM_GUESS_PATHS
 RETAIL_CONTACT_LINK_KEYWORDS = _ost.RETAIL_CONTACT_LINK_KEYWORDS
-SERPER_POSITIVE_TERMS = _ost.SERPER_POSITIVE_TERMS
-SERPER_NEGATIVE_TERMS = _ost.SERPER_NEGATIVE_TERMS
+SERPER_POSITIVE_TERMS = (
+    "niemcy",
+    "deutschland",
+    "ladenbau",
+    "posadzki",
+    "wyposażenie sklepów",
+    "innenausbau",
+    "podwykonawca",
+)
+SERPER_NEGATIVE_TERMS = tuple(
+    dict.fromkeys((*_PL_SERPER_NEGATIVE, *(_ost.SERPER_NEGATIVE_TERMS or ())))
+)
 LARGE_COMPANY_DOMAINS_EXTRA = _ost.LARGE_COMPANY_DOMAINS_EXTRA
 LARGE_COMPANY_NAME_MARKERS_EXTRA = _ost.LARGE_COMPANY_NAME_MARKERS_EXTRA
 SMALL_COMPANY_PAGE_MARKERS_EXTRA = _ost.SMALL_COMPANY_PAGE_MARKERS_EXTRA
 SMALL_COMPANY_DISCOVERY_TERMS_EXTRA = _ost.SMALL_COMPANY_DISCOVERY_TERMS_EXTRA
 
-# Geo wyłączone w scraperze — puste / ogólne (kompatybilność importów)
 DE_OST_PLACE_MARKERS: tuple[str, ...] = ()
 DE_OST_REGION_KEYWORDS = (
+    "polska",
+    "poland",
+    "niemcy",
     "deutschland",
-    "bundesrepublik",
-    "bundesweit",
 )
 DE_OST_RURAL_HINTS = _ost.DE_OST_RURAL_HINTS
 
-RETAIL_CHAINS_ROTATION = (
-    "Aldi",
-    "Rewe",
-    "Edeka",
-    "Netto",
-    "Penny",
-    "Kaufland",
-    "Lidl",
-    "Norma",
-)
-
-# Każda fraza Serper: GU + {city} + rotująca sieć {chain} (RETAIL_CHAINS_ROTATION).
-CHAIN_SIMPLE_TERM_TEMPLATES = (
-    "Generalunternehmer Filialbau {city} {chain} markt",
-    "Generalunternehmer Filialbau {city} {chain} Neubau",
-    "GU Supermarktbau {city} {chain}",
-    "GU Filialbau {city} {chain} markt",
-    "Generalunternehmer Einzelhandel {city} {chain}",
-    "GU Gewerbebau {city} {chain} Markt",
-    "Komplettgeneralunternehmer Filialbau {city} {chain}",
-)
-
-TERM_TEMPLATES = (
-    "Generalunternehmer Filialbau {city} {chain} Referenzprojekte",
-    "Generalunternehmer Ladenbau {city} {land} {chain} Neubau",
-    "GU Hochbau Supermarktbau {city} {chain} regional",
-    "Generalunternehmer Einzelhandelsbau {city} {chain} markt",
-    "Generalunternehmer {city} Filialumbau {chain}",
-    "GU Gewerbebau {city} Discounter {chain} Referenz",
-)
-
-# Alias dla promptów Claude / campaign_keyword_profile ({chain} w szablonie).
-SIMPLE_TERM_TEMPLATES = CHAIN_SIMPLE_TERM_TEMPLATES
-
-BUNDESLAND_CONFIG: dict[str, dict] = {
-    "Nordrhein-Westfalen": {
-        "short": "NRW",
-        "cities": (
-            "Düsseldorf",
-            "Köln",
-            "Dortmund",
-            "Essen",
-            "Duisburg",
-            "Bochum",
-            "Wuppertal",
-            "Bielefeld",
-            "Bonn",
-            "Münster",
-        ),
-    },
-    "Bayern": {
-        "short": "BY",
-        "cities": (
-            "München",
-            "Nürnberg",
-            "Augsburg",
-            "Regensburg",
-            "Würzburg",
-            "Ingolstadt",
-            "Fürth",
-            "Erlangen",
-        ),
-    },
-    "Baden-Wuerttemberg": {
-        "short": "BW",
-        "cities": (
-            "Stuttgart",
-            "Mannheim",
-            "Karlsruhe",
-            "Freiburg",
-            "Heidelberg",
-            "Ulm",
-            "Heilbronn",
-            "Pforzheim",
-        ),
-    },
-    "Niedersachsen": {
-        "short": "NI",
-        "cities": (
-            "Hannover",
-            "Braunschweig",
-            "Oldenburg",
-            "Osnabrück",
-            "Wolfsburg",
-            "Göttingen",
-        ),
-    },
-    "Hessen": {
-        "short": "HE",
-        "cities": (
-            "Frankfurt",
-            "Wiesbaden",
-            "Kassel",
-            "Darmstadt",
-            "Offenbach",
-            "Fulda",
-        ),
-    },
-    "Sachsen": {
-        "short": "SN",
-        "cities": (
-            "Dresden",
-            "Leipzig",
-            "Chemnitz",
-            "Zwickau",
-            "Plauen",
-            "Görlitz",
-        ),
-    },
-    "Rheinland-Pfalz": {
-        "short": "RP",
-        "cities": (
-            "Mainz",
-            "Ludwigshafen",
-            "Koblenz",
-            "Trier",
-            "Kaiserslautern",
-        ),
-    },
-    "Berlin": {
-        "short": "BE",
-        "cities": ("Berlin", "Potsdam"),
-    },
-    "Brandenburg": {
-        "short": "BB",
-        "cities": ("Potsdam", "Cottbus", "Frankfurt Oder", "Brandenburg Havel"),
-    },
-    "Schleswig-Holstein": {
-        "short": "SH",
-        "cities": ("Kiel", "Lübeck", "Flensburg", "Neumünster"),
-    },
-    "Thueringen": {
-        "short": "TH",
-        "cities": ("Erfurt", "Jena", "Gera", "Weimar", "Gotha"),
-    },
-    "Sachsen-Anhalt": {
-        "short": "ST",
-        "cities": ("Magdeburg", "Halle", "Dessau", "Wittenberg"),
-    },
-    "Mecklenburg-Vorpommern": {
-        "short": "MV",
-        "cities": ("Rostock", "Schwerin", "Stralsund", "Neubrandenburg"),
-    },
-    "Hamburg": {
-        "short": "HH",
-        "cities": ("Hamburg",),
-    },
-    "Bremen": {
-        "short": "HB",
-        "cities": ("Bremen", "Bremerhaven"),
-    },
-    "Saarland": {
-        "short": "SL",
-        "cities": ("Saarbrücken", "Neunkirchen", "Homburg"),
-    },
-}
-
-# Całe Niemcy (16 Bundesländer)
+BUNDESLAND_CONFIG: dict[str, dict] = WOJEWODZTWO_CONFIG
 ALL_BUNDESLAENDER: tuple[str, ...] = tuple(BUNDESLAND_CONFIG.keys())
+ALL_WOJEWODZTWA = ALL_BUNDESLAENDER
 DEFAULT_ACTIVE_BUNDESLAENDER: list[str] = list(ALL_BUNDESLAENDER)
-
 CAMPAIGN_ACTIVE_BUNDESLAENDER: list[str] = list(DEFAULT_ACTIVE_BUNDESLAENDER)
-
-# Więcej fraz Serper przy kampanii bundesweit (unlimited API w pipeline GHA)
 BUNDESWEIT_MAX_DISCOVERY_TERMS = 2400
 
 
@@ -220,35 +82,7 @@ def default_max_discovery_terms_for(active: list[str] | None = None) -> int:
 
 
 def _normalize_land_key(name: str) -> str:
-    n = (name or "").strip()
-    aliases = {
-        "nrw": "Nordrhein-Westfalen",
-        "by": "Bayern",
-        "bw": "Baden-Wuerttemberg",
-        "baden-württemberg": "Baden-Wuerttemberg",
-        "baden-wuerttemberg": "Baden-Wuerttemberg",
-        "ni": "Niedersachsen",
-        "he": "Hessen",
-        "sn": "Sachsen",
-        "rp": "Rheinland-Pfalz",
-        "be": "Berlin",
-        "bb": "Brandenburg",
-        "sh": "Schleswig-Holstein",
-        "th": "Thueringen",
-        "thüringen": "Thueringen",
-        "st": "Sachsen-Anhalt",
-        "mv": "Mecklenburg-Vorpommern",
-        "hh": "Hamburg",
-        "hb": "Bremen",
-        "sl": "Saarland",
-    }
-    low = n.lower()
-    if low in aliases:
-        return aliases[low]
-    for key in BUNDESLAND_CONFIG:
-        if key.lower() == low:
-            return key
-    return n
+    return normalize_wojewodztwo_key(name)
 
 
 def resolve_active_bundeslaender(names: list[str] | None = None) -> list[str]:
@@ -261,6 +95,9 @@ def resolve_active_bundeslaender(names: list[str] | None = None) -> list[str]:
             if key in BUNDESLAND_CONFIG and key not in out:
                 out.append(key)
     return out or list(DEFAULT_ACTIVE_BUNDESLAENDER)
+
+
+resolve_active_wojewodztwa = resolve_active_bundeslaender
 
 
 def _append_unique_term(terms: list[str], seen: set[str], text: str, *, max_terms: int) -> bool:
@@ -285,7 +122,17 @@ def _format_chain_term(
     land: str,
     chain: str,
 ) -> str:
-    return tmpl.format(city=city, land=land, chain=chain)
+    display = display_wojewodztwo(land)
+    try:
+        return tmpl.format(
+            city=city,
+            land=display,
+            wojewodztwo=display,
+            chain=chain,
+            short=BUNDESLAND_CONFIG.get(land, {}).get("short", ""),
+        )
+    except KeyError:
+        return tmpl.format(city=city, chain=chain)
 
 
 def build_discovery_terms(
@@ -312,14 +159,14 @@ def build_discovery_terms(
                 ):
                     return terms
     if len(lands) >= 10:
-        bundesweit = (
-            "Generalunternehmer Filialbau Deutschland {chain} Referenzprojekte",
-            "GU Supermarktbau Deutschland {chain} Neubau",
-            "Generalunternehmer Einzelhandel Deutschland {chain} markt",
-            "Komplettgeneralunternehmer Filialbau Deutschland {chain}",
-            "Generalunternehmer Ladenbau Deutschland {chain} regional",
+        nationwide = (
+            "wyposażenie sklepów Polska Niemcy {chain}",
+            "posadzki sklepowe Niemcy {chain}",
+            "podwykonawca budowa sklepów Deutschland {chain}",
+            "Ladenbau Firma Polska {chain}",
+            "firma budowlana realizacje Niemcy {chain}",
         )
-        for tmpl in bundesweit:
+        for tmpl in nationwide:
             chain = _rotating_chain(chain_counter)
             if _append_unique_term(
                 terms,
@@ -332,38 +179,29 @@ def build_discovery_terms(
 
 
 def build_landkreis_discovery_terms(active: list[str] | None = None) -> list[str]:
-    """Frazy z Landkreis / Kreis — czwarta fala discovery."""
     lands = resolve_active_bundeslaender(active)
     seen: set[str] = set()
     terms: list[str] = []
     chain_counter = [0]
     for land in lands:
-        short = BUNDESLAND_CONFIG[land]["short"]
+        display = display_wojewodztwo(land)
         for city in BUNDESLAND_CONFIG[land]["cities"][:6]:
             for tmpl in (
-                "Generalunternehmer Filialbau Landkreis {city} {chain} markt",
-                "Generalunternehmer Ladenbau {city} Kreis {short} {chain}",
-                "GU Gewerbebau {city} Landkreis {chain}",
+                "wyposażenie sklepów powiat {city} Niemcy",
+                "posadzki {city} {display} Niemcy {chain}",
+                "podwykonawca {city} montaż sklepów Niemcy",
             ):
                 chain = _rotating_chain(chain_counter)
                 _append_unique_term(
                     terms,
                     seen,
-                    tmpl.format(city=city, short=short, chain=chain),
+                    tmpl.format(city=city, display=display, chain=chain),
                     max_terms=10_000,
                 )
-        chain = _rotating_chain(chain_counter)
-        _append_unique_term(
-            terms,
-            seen,
-            f"Generalunternehmer Filialbau {land} Landkreis {chain} markt",
-            max_terms=10_000,
-        )
     return terms
 
 
 def build_places_discovery_terms(active: list[str] | None = None) -> list[str]:
-    """Krótkie frazy pod endpoint /places Serper (bez suffixu regionu)."""
     lands = resolve_active_bundeslaender(active)
     seen: set[str] = set()
     terms: list[str] = []
@@ -371,56 +209,48 @@ def build_places_discovery_terms(active: list[str] | None = None) -> list[str]:
     for land in lands:
         for city in BUNDESLAND_CONFIG[land]["cities"][:8]:
             for tmpl in (
-                "Generalunternehmer Filialbau {city} {chain} markt",
-                "Generalunternehmer Ladenbau {city} {chain}",
-                "GU Hochbau {city} {chain}",
-                "Generalunternehmer {city} {chain} Filialbau",
+                "wyposażenie sklepów {city} Niemcy",
+                "Ladenbau {city} Polen",
+                "posadzki {city} Niemcy",
+                "podwykonawca {city} Deutschland",
             ):
                 chain = _rotating_chain(chain_counter)
                 _append_unique_term(
                     terms, seen, tmpl.format(city=city, chain=chain), max_terms=10_000
                 )
-        chain = _rotating_chain(chain_counter)
-        _append_unique_term(
-            terms,
-            seen,
-            f"Generalunternehmer Filialbau {land} {chain} markt",
-            max_terms=10_000,
-        )
     return terms
 
 
 def build_broad_discovery_terms(active: list[str] | None = None) -> list[str]:
-    """Bardzo krótkie frazy — trzecia fala gdy primary + fallback dają za mało firm."""
     lands = resolve_active_bundeslaender(active)
     seen: set[str] = set()
     terms: list[str] = []
     chain_counter = [0]
     for land in lands:
+        display = display_wojewodztwo(land)
         short = BUNDESLAND_CONFIG[land]["short"]
         for city in BUNDESLAND_CONFIG[land]["cities"]:
             for tmpl in (
-                "Generalunternehmer {city} {chain} Filialbau",
-                "Generalunternehmer {city} {chain} Bau",
-                "GU Filialbau {city} {chain}",
-                "Generalunternehmer Ladenbau {city} {chain}",
+                "firma {city} Niemcy wyposażenie sklepów",
+                "posadzki {city} Niemcy",
+                "budowlana {city} realizacje Deutschland",
+                "Innenausbau {city} Polen",
             ):
                 chain = _rotating_chain(chain_counter)
                 _append_unique_term(
                     terms, seen, tmpl.format(city=city, chain=chain), max_terms=10_000
                 )
         for tmpl in (
-            "Generalunternehmer Filialbau {land} {chain} markt",
-            "Generalunternehmer Ladenbau {land} {chain}",
-            "GU Filialbau {short} {chain}",
-            "GU Supermarktbau {land} {chain}",
-            "Generalunternehmer Einzelhandel {land} {chain}",
+            "wyposażenie sklepów {land} Niemcy {chain}",
+            "posadzki {land} {chain}",
+            "podwykonawca {short} Niemcy {chain}",
+            "Ladenbau {land} Polska {chain}",
         ):
             chain = _rotating_chain(chain_counter)
             _append_unique_term(
                 terms,
                 seen,
-                tmpl.format(land=land, short=short, chain=chain),
+                tmpl.format(land=display, short=short, chain=chain),
                 max_terms=10_000,
             )
     return terms
@@ -431,20 +261,21 @@ def build_fallback_terms(active: list[str] | None = None) -> list[str]:
     fb: list[str] = []
     chain_counter = [0]
     for land in lands:
+        display = display_wojewodztwo(land)
         short = BUNDESLAND_CONFIG[land]["short"]
         for tmpl in (
-            "Generalunternehmer Filialbau {land} {chain} markt",
-            "Generalunternehmer Hochbau Einzelhandel {short} {chain}",
-            "Generalunternehmer Ladenbau {land} {chain} Referenz",
-            "GU Supermarktbau {land} {chain} regional",
+            "wyposażenie sklepów {land} Niemcy {chain}",
+            "posadzki sklepowe {short} Niemcy {chain}",
+            "podwykonawca {land} budowa sklepów",
+            "firma {land} Ladenbau Deutschland",
         ):
             chain = _rotating_chain(chain_counter)
-            fb.append(tmpl.format(land=land, short=short, chain=chain))
+            fb.append(tmpl.format(land=display, short=short, chain=chain))
     for tmpl in (
-        "Generalunternehmer Filialbau Deutschland {chain} Referenz",
-        "GU Hochbau Discounter {chain} Neubau Deutschland",
-        "Komplettgeneralunternehmer Einzelhandel {chain} Filialumbau",
-        "Generalunternehmer Handelsimmobilie {chain} markt",
+        "wyposażenie sklepów Polska Niemcy {chain}",
+        "posadzki żywiczne Niemcy {chain}",
+        "podwykonawca budowa sklepów Deutschland {chain}",
+        "Innenausbau Polen Deutschland {chain}",
     ):
         chain = _rotating_chain(chain_counter)
         fb.append(tmpl.format(chain=chain))
@@ -458,15 +289,13 @@ def build_fallback_terms(active: list[str] | None = None) -> list[str]:
 
 
 def build_region_suffix(active: list[str] | None = None) -> str:
-    """Krótki suffix — długie query Serper prawie zawsze zwraca 0 wyników."""
     lands = resolve_active_bundeslaender(active)
     if len(lands) <= 1:
-        return "Deutschland"
-    # Faza 3: bundesweit (≥4 landy) — tylko „Deutschland”, bez skrótów NRW/BY/…
+        return "Polska Niemcy"
     if len(lands) >= 4:
-        return "Deutschland"
+        return "Polska Niemcy"
     shorts = " ".join(BUNDESLAND_CONFIG[l]["short"] for l in lands[:4])
-    return f"Deutschland {shorts}"
+    return f"Polska Niemcy {shorts}"
 
 
 def configure_campaign_bundeslaender(
@@ -475,7 +304,6 @@ def configure_campaign_bundeslaender(
     *,
     max_discovery_terms: int | None = None,
 ) -> list[str]:
-    """Ustawia aktywne landy i przeładowuje listy Serper na module scrapera."""
     global CAMPAIGN_ACTIVE_BUNDESLAENDER
     active = resolve_active_bundeslaender(names)
     if max_discovery_terms is None:
@@ -493,7 +321,8 @@ def configure_campaign_bundeslaender(
     return active
 
 
-# Eksport domyślny (fala 1)
+configure_campaign_wojewodztwa = configure_campaign_bundeslaender
+
 SERPER_DISCOVERY_TERMS = build_discovery_terms()
 SERPER_DISCOVERY_FALLBACK_TERMS = build_fallback_terms()
 SERPER_DISCOVERY_BROAD_TERMS = build_broad_discovery_terms()
