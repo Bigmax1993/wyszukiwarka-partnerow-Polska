@@ -74,6 +74,22 @@ class TestPolishDeFilter:
         assert ok
         assert "pl_" in reason
 
+    def test_serper_rejects_portal_and_non_trade_even_with_bau_query(self):
+        from pl_de_company_filter import is_pl_de_serper_discovery_candidate
+
+        assert not is_pl_de_serper_discovery_candidate(
+            name="Krs Pobierz",
+            url="https://krs-pobierz.pl",
+            text="pobierz odpis KRS firmy",
+            search_term="podwykonawca budowlany Niemcy",
+        )
+        assert not is_pl_de_serper_discovery_candidate(
+            name="Przeprowadzki Wrocław",
+            url="https://przeprowadzki.pl",
+            text="przeprowadzki międzynarodowe",
+            search_term="podwykonawca budowlany Wrocław Niemcy",
+        )
+
     def test_rejects_german_gmbh_only(self):
         from pl_de_company_filter import is_polish_company_operating_in_germany
 

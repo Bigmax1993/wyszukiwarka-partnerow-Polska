@@ -251,6 +251,22 @@ EXCEL_EXCLUDED_VERIFICATION_REASONS = frozenset(
         VERIFICATION_REASON_NO_BAU,
     }
 )
+_EXCEL_EXCLUDED_CLAUDE_ROLES = frozenset(
+    {
+        "portal",
+        "urzad",
+        "urząd",
+        "agencjapracy",
+        "siechandlowa",
+        "dewelopermieszkaniowy",
+        "betreiber",
+        "händler",
+        "handler",
+        "medienportal",
+        "sonstiges",
+        "generalunternehmerde",
+    }
+)
 CAMPAIGN_TIMEZONE = os.environ.get("SCRAPER_TIMEZONE", "Europe/Warsaw")
 
 # Geo: bundesweit (Filter PLZ/Distanz aus; center nur für Hilfsfunktionen)
@@ -1823,7 +1839,14 @@ def _row_passes_strict_retail_filters(row: dict) -> bool:
 
 def _verification_reason_excludes_excel(row: dict) -> bool:
     reason = (row.get("verification_reason") or "").strip()
-    return reason in EXCEL_EXCLUDED_VERIFICATION_REASONS
+    if reason in EXCEL_EXCLUDED_VERIFICATION_REASONS:
+        return True
+    low = reason.lower()
+    if low.startswith("claude_role:"):
+        role = low.split(":", 1)[1].strip().replace(" ", "")
+        if role in _EXCEL_EXCLUDED_CLAUDE_ROLES:
+            return True
+    return False
 
 
 def _cache_urls_excluded_from_excel(cache: dict | None) -> set[str]:

@@ -599,6 +599,16 @@ class SerperOnlyFilterRegression(unittest.TestCase):
         self.assertEqual(scraper.build_export_rows([row]), [])
         self.assertEqual(scraper.build_bundesland_rows([row]), [])
 
+    def test_claude_portal_never_in_excel(self):
+        row = {
+            "nazwa": "Krs Pobierz",
+            "url": "https://krs-pobierz.pl",
+            "retail_verified": False,
+            "verification_reason": "claude_role:Portal",
+            "email_target": "",
+        }
+        self.assertFalse(scraper.is_row_eligible_for_excel_export(row))
+
     def test_verified_row_rejected_when_not_small(self):
         row = {
             "nazwa": "Müller GU GmbH",

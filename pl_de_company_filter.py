@@ -188,6 +188,16 @@ _REJECT_MARKERS = (
     "urząd",
     "urzad gminy",
     "starostwo",
+    "krs-pobierz",
+    "pobierz krs",
+    "pobierz odpis",
+    "odpis krs",
+    "monitor sądowy",
+    "monitor sadowy",
+    "ceidg",
+    "przeprowadzk",
+    "moving company",
+    "umzug",
 )
 
 
@@ -283,40 +293,42 @@ def is_pl_de_serper_discovery_candidate(
     search_term: str = "",
 ) -> bool:
     """
-    Filtr Serper dla kampanii PL→DE: polski trop LUB .pl + branża budowlana/fit-out
-    + ślad Niemiec w snippecie lub w frazie wyszukiwania.
-    Nie wymaga Generalunternehmer / Filialbau.
+    Filtr Serper dla kampanii PL→DE: polski trop + branża w snippecie/nazwie firmy
+    + ślad Niemiec (snippet LUB fraza Serper).
+    Frazy wyszukiwania NIE udają branży firmy.
     """
     if is_rejected_non_target(name=name, url=url, email=email, text=text):
         return False
-    blob = _blob(name=name, url=url, email=email, text=text)
-    term = (search_term or "").strip()
-    combined = f"{blob} {term}".strip()
-    low = combined.lower()
+    company_blob = _blob(name=name, url=url, email=email, text=text)
+    term = (search_term or "").strip().lower()
+    company_low = company_blob.lower()
 
     polish = (
         has_polish_legal_form(name)
         or has_polish_domain(url, email)
-        or has_polish_address_signal(blob)
+        or has_polish_address_signal(company_blob)
         or ".pl" in (url or "").lower()
-        or "polska" in low
-        or "poland" in low
-        or " polen" in f" {low} "
+        or "polska" in company_low
+        or "poland" in company_low
+        or " polen" in f" {company_low} "
     )
     if not polish and is_german_only_entity(name=name, url=url, email=email, text=text):
         return False
-    if not polish and not any(
-        m in low for m in ("polska", "poland", "polen", "sp. z o.o", "sp zoo", ".pl")
-    ):
-        # bez polskiego tropu — tylko jeśli fraza Serper jest PL-oriented
-        if not any(m in term.lower() for m in ("polska", "polen", "niemcy", "podwykonawca")):
-            return False
-
-    if not (has_target_trade(low) or has_commercial_or_industrial_object_context(low)):
+    if not polish:
+        # bez polskiego tropu w wyniku — odrzuć (nie ratujemy frazą Serper)
         return False
-    if not has_germany_work_evidence(low) and not any(
-        m in term.lower() for m in ("niemcy", "deutschland", "germany")
+
+    # Branża musi być w wyniku Serper (tytuł/snippet/URL), nie w frazie zapytania.
+    if not (
+        has_target_trade(company_low)
+        or has_commercial_or_industrial_object_context(company_low)
     ):
+        return False
+
+    de_ok = has_germany_work_evidence(company_low) or any(
+        m in term for m in ("niemcy", "deutschland", "germany")
+    )
+    if not de_ok:
         return False
     return True
 
