@@ -599,6 +599,48 @@ class SerperOnlyFilterRegression(unittest.TestCase):
         self.assertEqual(scraper.build_export_rows([row]), [])
         self.assertEqual(scraper.build_bundesland_rows([row]), [])
 
+    def test_cleared_mail_queue_email_not_resurrected_in_excel(self):
+        row = {
+            "nazwa": "Korner Wałbrzych",
+            "url": "https://korner.pl",
+            "www": "https://korner.pl",
+            "retail_verified": True,
+            "email_target": "",
+            "emails_found": "sprzedaz@korner.pl, sekretariat@korner.pl",
+            "page_snippet": "okna drzwi stolarka Wałbrzych",
+        }
+        self.assertFalse(scraper.is_row_eligible_for_excel_export(row))
+        self.assertEqual(scraper.build_export_rows([row]), [])
+        self.assertEqual(scraper.build_bundesland_rows([row]), [])
+
+    def test_missing_de_evidence_not_in_excel_even_with_email(self):
+        row = {
+            "nazwa": "Posadzki-X sp. z o.o.",
+            "url": "https://posadzki-x.pl",
+            "www": "https://posadzki-x.pl",
+            "email_target": "biuro@posadzki-x.pl",
+            "retail_verified": True,
+            "page_snippet": "posadzki żywiczne Warszawa",
+        }
+        self.assertFalse(scraper.is_row_eligible_for_excel_export(row))
+        self.assertEqual(scraper.build_export_rows([row]), [])
+
+    def test_sent_pl_de_contact_stays_in_excel(self):
+        row = {
+            "nazwa": "Ergo Store sp. z o.o.",
+            "url": "https://ergostore.pl",
+            "www": "https://ergostore.pl",
+            "email_target": "biuro@ergostore.pl",
+            "email_status": "sent",
+            "retail_verified": True,
+            "is_gu": True,
+            "page_snippet": "Meble sklepowe montaż Lidl Niemcy referencje Deutschland",
+        }
+        self.assertTrue(scraper.is_row_eligible_for_excel_export(row))
+        export = scraper.build_export_rows([row])
+        self.assertEqual(len(export), 1)
+        self.assertEqual(export[0]["E-mail"], "biuro@ergostore.pl")
+
     def test_claude_portal_never_in_excel(self):
         row = {
             "nazwa": "Krs Pobierz",

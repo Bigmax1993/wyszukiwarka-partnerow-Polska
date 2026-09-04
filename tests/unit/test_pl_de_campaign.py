@@ -179,3 +179,77 @@ class TestExcelFourColumns:
             "Numer Telefonu",
             "E-mail",
         ]
+
+    def test_excel_matches_mail_queue_not_emails_found_fallback(self):
+        import de_gu_bauunternehmen_scraper as scraper
+
+        wiped = {
+            "nazwa": "Assmann",
+            "url": "https://assmann.pl",
+            "www": "https://assmann.pl",
+            "email_target": "",
+            "emails_found": "office@assmann.pl",
+            "retail_verified": True,
+            "page_snippet": "meble biurowe",
+        }
+        assert scraper.build_export_rows([wiped]) == []
+        assert scraper.build_bundesland_rows([wiped]) == []
+
+    def test_save_excel_drops_wiped_queue_rows_from_existing_file(self, tmp_path):
+        import pandas as pd
+
+        import de_gu_bauunternehmen_scraper as scraper
+
+        xlsx = tmp_path / "kontakte.xlsx"
+        logger = scraper.setup_logging()
+        keep = {
+            "nazwa": "Ergo Store sp. z o.o.",
+            "company_name_clean": "Ergo Store sp. z o.o.",
+            "url": "https://ergostore.pl",
+            "www": "https://ergostore.pl",
+            "email_target": "biuro@ergostore.pl",
+            "retail_verified": True,
+            "is_gu": True,
+            "is_small_firm": True,
+            "verification_reason": "ok",
+            "page_snippet": "Meble sklepowe montaż Lidl Niemcy referencje Deutschland",
+            "retail_chains_found": "lidl",
+        }
+        pd.DataFrame(
+            [
+                {
+                    "Nazwa firmy": "Assmann",
+                    "Adres": "",
+                    "Numer Telefonu": "",
+                    "E-mail": "office@assmann.pl",
+                }
+            ]
+        ).to_excel(xlsx, sheet_name="Kontakte", index=False)
+        wiped = {
+            "nazwa": "Assmann",
+            "company_name_clean": "Assmann",
+            "url": "https://assmann.pl",
+            "www": "https://assmann.pl",
+            "email_target": "",
+            "emails_found": "office@assmann.pl",
+            "retail_verified": True,
+            "page_snippet": "meble biurowe Polska",
+        }
+        cache = {
+            "contacts": {
+                "https://assmann.pl": {
+                    "company_name": "Assmann",
+                    "email_target": "",
+                    "emails_found": "office@assmann.pl",
+                    "retail_verified": True,
+                    "page_snippet": "meble biurowe Polska",
+                }
+            }
+        }
+        scraper.save_excel([keep, wiped], xlsx, logger, cache=cache)
+        df = pd.read_excel(xlsx, sheet_name="Kontakte")
+        mails = {str(u).strip() for u in df["E-mail"].fillna("").tolist() if str(u).strip()}
+        names = {str(u).strip() for u in df["Nazwa firmy"].fillna("").tolist() if str(u).strip()}
+        assert "biuro@ergostore.pl" in mails
+        assert "office@assmann.pl" not in mails
+        assert "Assmann" not in names
