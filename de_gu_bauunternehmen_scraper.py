@@ -5872,8 +5872,12 @@ def enrich_row_with_contacts(
         row["is_gu"] = verification.get("is_gu", False)
         row["gu_marker"] = verification.get("gu_marker", "")
         if not verification.get("verified"):
+            if REQUIRE_GENERALUNTERNEHMER:
+                reject_label = "brak Einzelhandel/Hochbau-Filialbau"
+            else:
+                reject_label = "brak branży budowlanej / fit-out PL→DE"
             console_step(
-                f"Odrzucono (brak Einzelhandel/Hochbau-Filialbau): "
+                f"Odrzucono ({reject_label}): "
                 f"{company_for_email} — {row['verification_reason']}"
             )
             skip = {
@@ -6138,8 +6142,13 @@ def _process_serper_terms(
                 and not r.get("retail_verified")
             ):
                 reason = (r.get("verification_reason") or "").strip()
+                fallback = (
+                    "kein GU/Filialbau/Referenzen"
+                    if REQUIRE_GENERALUNTERNEHMER
+                    else "brak weryfikacji branży PL→DE"
+                )
                 console_step(
-                    f"Übersprungen (www: {reason or 'kein GU/Filialbau/Referenzen'}): "
+                    f"Übersprungen (www: {reason or fallback}): "
                     f"{r.get('nazwa', '')}"
                 )
                 continue
