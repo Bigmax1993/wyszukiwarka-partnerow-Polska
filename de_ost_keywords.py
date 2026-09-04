@@ -1,123 +1,31 @@
 # -*- coding: utf-8 -*-
-"""Słowniki słów kluczowych – DE Ost GU: Neubau + Umbau/Modernisierung marketów (Serper, www)."""
+"""
+Legacy słowniki DE-Ost GU (Filialbau) — markery filtrów / kompatybilność importów.
 
-SERPER_DISCOVERY_REGION_SUFFIX = (
-    "Brandenburg Sachsen Thüringen Ostdeutschland Kleinstadt Landkreis Dorf regional "
-    "Generalunternehmer Hochbau Filialneubau Filialumbau Marktmodernisierung "
-    "Gewerbebau mittelständisch Referenzprojekte"
-)
+Kampania Hurt Matbud / Polska NIE szuka niemieckich Generalunternehmer.
+Discovery Serper buduje się z pl_wojewodztwa.py (polscy podwykonawcy budowlani w DE).
+Poniższe SERPER_DISCOVERY_* są historyczne; runtime nadpisuje je w de_gu_keywords.py.
+"""
+
+# Historyczne — runtime PL używa de_gu_keywords.build_discovery_terms().
+SERPER_DISCOVERY_REGION_SUFFIX = "Polska Niemcy podwykonawca budowlany"
 
 SERPER_DISCOVERY_TERMS = [
-    "Bauunternehmen Ladenbau mittelständisch Brandenburg Aldi Referenz",
-    "Generalunternehmer Filialbau Familienunternehmen Sachsen Rewe",
-    "Ladenbau Meisterbetrieb Thüringen Kaufland Neubau",
-    "Bauunternehmen Discounter Filialneubau regional Brandenburg Penny",
-    "Generalunternehmer Einzelhandelsbau klein Leipzig Netto",
-    "Ladenbau Generalunternehmer Dresden Aldi Referenzprojekte",
-    "Bauunternehmen Supermarktbau inhabergeführt Chemnitz Rewe",
-    "Generalunternehmer Filialbau Cottbus Kaufland",
-    "Ladenbau regional Potsdam Netto Marktbau",
-    "Bauunternehmen Einzelhandel Erfurt Penny Referenzen",
-    "Generalunternehmer Marktbau Halle Saale Lidl",
-    "Ladenbau Generalunternehmer Jena Rewe Filiale",
-    "Bauunternehmen Ladenbau Landkreis Barnim Familienbetrieb Aldi",
-    "Generalunternehmer Filialbau Uckermark Kleinstadt Rewe",
-    "Ladenbau Meisterbetrieb Bautzen Oberlausitz Kaufland",
-    "Bauunternehmen Discounter Neubau Prignitz regional Penny",
-    "Generalunternehmer Einzelhandel Spree-Neiße Cottbus Umland Netto",
-    "Ladenbau GU Erzgebirge Annaberg-Buchholz Aldi Referenz",
-    "Bauunternehmen Filialbau Vogtland Plauen inhabergeführt",
-    "Generalunternehmer Ladenbau Kyffhäuserkreis Thüringen Rewe",
-    "Ladenbau regional Elbe-Elster Herzberg Kaufland",
-    "Bauunternehmen mittelständisch Oberspreewald-Lausitz Senftenberg",
-    "Generalunternehmer Discounter Filialneubau Saale-Orla-Kreis",
-    "Ladenbau Generalunternehmer Altmark Gardelegen regional",
-    "Bauunternehmen Aldi Neubau Märkisch-Oderland Bad Freienwalde",
-    "Generalunternehmer Rewe Filialbau Görlitz Landkreis",
-    "Ladenbau Meisterbetrieb Zwickau Erzgebirgskreis Netto",
-    "Bauunternehmen Einzelhandel Weimar Umland Thüringen Penny",
-    "Generalunternehmer Filialbau Nordwestuckermark Prenzlau klein",
-    "Ladenbau GU Torgau-Oschatz Nordsachsen Aldi Referenz",
-    "Generalunternehmer Hochbau Filialbau Aldi Brandenburg Referenz",
-    "GU Hochbau Supermarkt Neubau Sachsen Rewe",
-    "Bauunternehmen Hochbau Discounter Kaufland Thüringen",
-    "Generalunternehmer Hoch- und Rohbau Filiale Leipzig Netto",
-    "Hochbau Generalunternehmer Marktbau Dresden Penny",
-    "GU Hochbau Einzelhandelsimmobilie Cottbus Lidl",
-    "Generalunternehmer Gewerbebau Einzelhandel Halle Aldi",
-    "Hochbau GU Filialneubau Erfurt Rewe regional",
-    "Generalunternehmer Hochbau Handelsimmobilie Chemnitz Kaufland",
-    "Bauunternehmen Hochbau Filialumbau Bautzen Edeka",
-    "GU Hochbau Discounter Neubau Prignitz Penny",
-    "Generalunternehmer Hochbau Marktbau Landkreis Barnim Netto",
-    "Generalunternehmer Hochbau schlüsselfertig Filiale Aldi Brandenburg",
-    "GU Hoch- und Rohbau Discounter Neubau Sachsen Rewe Referenz",
-    "Komplettgeneralunternehmer Supermarktbau Kaufland Thüringen",
-    "Bauunternehmen Hochbau Handelsimmobilie Leipzig Netto",
-    "Generalunternehmer Gewerbebau Einzelhandel Dresden Penny",
-    "Hochbau GU Filialgebäude Cottbus Lidl regional",
-    "Generalunternehmer Stahlbau Markt Neubau Chemnitz Aldi",
-    "Bauunternehmen Rohbau Filialneubau Erfurt Rewe",
-    "GU Totalausführung Discounter Umbau Brandenburg Kaufland",
-    "Hochbau Generalunternehmer Hallenbau Supermarkt Halle Edeka",
-    "Generalunternehmer Filialbau aus einer Hand Jena Netto",
-    "Bauunternehmen Hochbau Filialsanierung Bautzen Penny",
-    "GU Komplettbau Einzelhandelsimmobilie Vogtland Plauen",
-    "Generalunternehmer Hochbau Marktbau Landkreis Spree-Neiße",
-    "Bauunternehmer Filialprojekt Aldi Neubau Uckermark",
-    "Hochbau GU Discounter Revitalisierung Görlitz Rewe",
-    "Generalunternehmer Handelsbau Familienbetrieb Prignitz Lidl",
-    "Bauunternehmen Hochbau Filialstandort Erzgebirge Kaufland",
-    "GU Hochbau Nahversorger Neubau Kyffhäuserkreis",
-    "Generalunternehmer Einzelhandelsneubau Altmark Gardelegen Aldi",
-    "Hochbau Generalunternehmer SB-Warenhaus Umbau Leipzig",
-    "Bauunternehmen Hochbau Verbrauchermarkt Neubau Saalfeld",
-    "GU Filialbau Rollout regional Brandenburg Edeka",
-    "Generalunternehmer Hochbau Markterweiterung Dresden Netto",
-    "Bauunternehmen schlüsselfertig Filialbau Senftenberg Penny",
-    "Generalunternehmer Komplettbau Filialneubau Lausitz Rewe",
-    "Hauptauftragnehmer Hochbau Einzelhandel Potsdam Aldi",
-    "Bauunternehmen Massivbau Discounter Neubau Görlitz",
-    "GU schlüsselfertige Übergabe Supermarkt Chemnitz Lidl",
-    "Generalunternehmer Marktumbau Filialmodernisierung Brandenburg",
-    "GU Filialumbau Supermarkt Revitalisierung Sachsen",
-    "Generalunternehmer Umbau Discounter Thüringen Referenz",
-    "Komplettgeneralunternehmer Marktmodernisierung Rewe regional",
-    "Generalunternehmer Filialumbau Aldi Umbau Leipzig",
-    "GU Lebensmittelmarkt Modernisierung Dresden",
-    "Generalunternehmer Bestandsumbau Filiale Edeka Cottbus",
+    "podwykonawca budowlany Polska Niemcy",
+    "firma budowlana realizacje Niemcy sp. z o.o.",
+    "wyposażenie sklepów Polska Deutschland",
+    "wykończenia restauracje hotele Niemcy",
+    "posadzki przemysłowe hale Niemcy",
+    "montaż drogerii Rossmann DM Niemcy",
+    "instalacje HVAC sklepy Niemcy Polska",
+    "Ladenbau Firma Polska",
+    "Innenausbau Polen Deutschland",
+    "hale przemysłowe podwykonawca Niemcy",
 ]
 
-SERPER_DISCOVERY_FALLBACK_TERMS = [
-    "Generalunternehmer Einzelhandelsbau Brandenburg",
-    "Generalunternehmer Hochbau Filialbau Sachsen",
-    "Generalunternehmer Filialbau Thüringen",
-    "Generalunternehmer Aldi Neubau Ostdeutschland",
-    "Generalunternehmer Kaufland Bauprojekt",
-    "Generalunternehmer Rewe Filialbau",
-    "Ladenbau Generalunternehmer Leipzig",
-    "Generalunternehmer Discounter Dresden",
-    "Generalunternehmer Einzelhandel Erfurt",
-    "Generalunternehmer Supermarktbau Chemnitz",
-    "Generalunternehmer Penny Filialneubau",
-    "Generalunternehmer Netto Marktbau",
-    "Ladenbau Generalunternehmer Kleinort Brandenburg Landkreis",
-    "Bauunternehmen Filialbau Dorf Sachsen regional",
-    "Generalunternehmer Ladenbau Gemeinde Thüringen",
-    "Generalunternehmer Hochbau Einzelhandel Brandenburg",
-    "GU Hochbau Filialbau Sachsen",
-    "Hochbau Generalunternehmer Discounter Thüringen",
-    "Generalunternehmer Hochbau Supermarktbau Ostdeutschland",
-    "Bauunternehmen Hochbau Marktbau regional",
-    "Komplettgeneralunternehmer Einzelhandel Ostdeutschland",
-    "Generalunternehmer Handelsbau Referenz",
-    "GU Rohbau Filialbau",
-    "Generalunternehmer schlüsselfertig Discounter",
-    "Hochbau Generalunternehmer Familienunternehmen",
-    "Generalunternehmer Marktumbau Filialumbau",
-    "GU Supermarkt Modernisierung Umbau Ostdeutschland",
-    "Generalunternehmer Filialrevitalisierung Discounter",
-]
+SERPER_DISCOVERY_FALLBACK_TERMS = list(SERPER_DISCOVERY_TERMS)
+
+# --- legacy markery GU/retail (importowane przez de_gu_keywords) ---
 
 GU_ROLE_KEYWORDS = (
     "generalunternehmer",

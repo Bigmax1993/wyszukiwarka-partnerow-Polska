@@ -581,6 +581,24 @@ class SerperOnlyFilterRegression(unittest.TestCase):
         }
         self.assertFalse(scraper.is_row_eligible_for_excel_export(row))
 
+    def test_kein_gu_filialbau_kontext_never_in_excel(self):
+        row = {
+            "nazwa": "Assmann",
+            "company_name": "Assmann",
+            "url": "https://assmann.pl/",
+            "www": "https://assmann.pl/",
+            "retail_verified": False,
+            "verification_reason": scraper.VERIFICATION_REASON_NO_FILIALBAU,
+            "email_status": "skipped_no_retail_proof",
+            "email_target": "",
+            "is_small_firm": True,
+            "is_gu": False,
+            "page_snippet": "meble biurowe Polska",
+        }
+        self.assertFalse(scraper.is_row_eligible_for_excel_export(row))
+        self.assertEqual(scraper.build_export_rows([row]), [])
+        self.assertEqual(scraper.build_bundesland_rows([row]), [])
+
     def test_verified_row_rejected_when_not_small(self):
         row = {
             "nazwa": "Müller GU GmbH",

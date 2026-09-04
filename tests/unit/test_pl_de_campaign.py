@@ -24,6 +24,7 @@ class TestWojewodztwa:
         blob = " ".join(terms).lower()
         assert "wrocław" in blob or "wroclaw" in blob or "niemcy" in blob
         assert "generalunternehmer filialbau" not in blob
+        assert "podwykonawca" in blob or "budowlana" in blob or "wykończenia" in blob
 
     def test_rotation_order(self):
         from gu_bundesland_rotation import (
@@ -54,6 +55,24 @@ class TestPolishDeFilter:
             email="biuro@ergostore.pl",
             text="Meble sklepowe montaż Lidl Niemcy referencje Deutschland",
         )
+
+    def test_accepts_polish_hvac_subcontractor(self):
+        from pl_de_company_filter import (
+            is_pl_de_serper_discovery_candidate,
+            page_mentions_pl_builder_projects,
+        )
+
+        assert is_pl_de_serper_discovery_candidate(
+            name="Klimat Tech sp. z o.o.",
+            url="https://klimat-tech.pl",
+            text="Klimatyzacja obiekty handlowe Niemcy",
+            search_term="instalacje HVAC sklepy Niemcy Wrocław",
+        )
+        ok, _, reason = page_mentions_pl_builder_projects(
+            "Klimatyzacja i wentylacja sklepy Lidl Niemcy referencje"
+        )
+        assert ok
+        assert "pl_" in reason
 
     def test_rejects_german_gmbh_only(self):
         from pl_de_company_filter import is_polish_company_operating_in_germany

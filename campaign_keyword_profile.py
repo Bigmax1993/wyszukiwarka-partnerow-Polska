@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Wspólny słownik kampanii GU / Filialbau — używany przez Serper, regex i Claude.
+Wspólny słownik kampanii PL→DE (Hurt Matbud) — Serper, regex i Claude.
+Target: polscy podwykonawcy / firmy budowlane i fit-out działające w DE
+(sklepy, drogerie, restauracje, hale) — NIE niemieccy Generalunternehmer.
 """
 from __future__ import annotations
 
@@ -32,6 +34,7 @@ REJECT_PRIMARY_ROLES = frozenset(
         "AgencjaPracy",
         "SiecHandlowa",
         "DeweloperMieszkaniowy",
+        "GeneralunternehmerDE",
         "Sonstiges",
     }
 )
@@ -42,13 +45,37 @@ SERPER_TEMPLATE_PATTERNS: tuple[str, ...] = tuple(
 
 
 def gu_required_keywords_sample(*, max_items: int = 12) -> list[str]:
-    return list(STRICT_GU_MARKERS)[:max_items]
+    # Nazwa historyczna — w kampanii PL to markery branży wykonawczej, nie GU DE.
+    return [
+        "podwykonawca",
+        "budowlana",
+        "wykończenia",
+        "posadzki",
+        "wyposażenie sklepów",
+        "ladenbau",
+        "innenausbau",
+        "fit-out",
+        "hale",
+        "instalacje",
+        "montaż",
+        "realizacje niemcy",
+    ][:max_items]
 
 
 def retail_context_keywords_sample(*, max_items: int = 16) -> list[str]:
     seen: set[str] = set()
     out: list[str] = []
     for group in (
+        (
+            "sklep",
+            "drogeria",
+            "restauracja",
+            "hotel",
+            "hala",
+            "magazyn",
+            "obiekt handlowy",
+            "centrum handlowe",
+        ),
         FILIALBAU_SPECIALIST_MARKERS,
         RETAIL_STORE_BUILD_MARKERS,
         RETAIL_STORE_UMBAU_MARKERS,
@@ -105,12 +132,19 @@ def negative_keywords_sample(*, max_items: int = 14) -> list[str]:
     seen: set[str] = set()
     out: list[str] = []
     for item in (
-        *NON_GU_ROLE_EXCLUSION_MARKERS,
-        *SERPER_NEGATIVE_TERMS[:20],
         "agencja pracy",
         "olx",
         "urząd",
         "deweloper mieszkaniowy",
+        "generalunternehmer",
+        "gmbh nur deutschland",
+        *SERPER_NEGATIVE_TERMS[:12],
+        # architektów/planowanie z legacy — bez subunternehmer (to jest nasz target)
+        *(
+            m
+            for m in NON_GU_ROLE_EXCLUSION_MARKERS
+            if m not in ("subunternehmer", "nachunternehmer")
+        ),
     ):
         key = item.strip().lower()
         if key and key not in seen:

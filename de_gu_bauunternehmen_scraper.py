@@ -1,7 +1,8 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
-Serper API – polskie firmy (wyposażenie sklepów, posadzki, budownictwo, podwykonawcy)
-działające na terenie Niemiec. Rotacja województw PL. Maile Hurt Matbud (PL, imienne).
+Serper API – polskie firmy budowlane / podwykonawcy (sklepy, drogerie, restauracje, hale,
+wykończenia, instalacje) działające na terenie Niemiec. Rotacja województw PL.
+Maile Hurt Matbud (PL, imienne). Nie: niemieccy Generalunternehmer.
 """
 from __future__ import annotations
 
@@ -241,6 +242,15 @@ DISCOVERY_MIN_PENDING_GHA_FAIL = 5
 SERPER_CANDIDATES_TARGET = 80
 SERPER_DISCOVERY_EMPTY_CACHE_DAYS = 7
 PENDING_WWW_VERIFY_REASON = "pending_www_verify"
+# Brak kontekstu GU/Filialbau lub branży budowlanej — nie trafia do Excela (tylko cache JSON).
+VERIFICATION_REASON_NO_FILIALBAU = "kein_gu_filialbau_kontext"
+VERIFICATION_REASON_NO_BAU = "kein_bau_gewerbe_kontext"
+EXCEL_EXCLUDED_VERIFICATION_REASONS = frozenset(
+    {
+        VERIFICATION_REASON_NO_FILIALBAU,
+        VERIFICATION_REASON_NO_BAU,
+    }
+)
 CAMPAIGN_TIMEZONE = os.environ.get("SCRAPER_TIMEZONE", "Europe/Warsaw")
 
 # Geo: bundesweit (Filter PLZ/Distanz aus; center nur für Hilfsfunktionen)
@@ -647,8 +657,10 @@ from mfg_gu_email_attachment import (
     ensure_mfg_email_attachment,
 )
 from pl_de_company_filter import (
+    is_pl_de_serper_discovery_candidate,
     is_polish_company_operating_in_germany,
     needs_review_missing_de_evidence,
+    page_mentions_pl_builder_projects,
 )
 _OST_GU_SMTP_DEFAULT_HOST = "serwer.home.pl"
 _OST_GU_SMTP_PORT_SSL = 465
@@ -1105,9 +1117,9 @@ def build_excel_info_sheet_rows() -> list[dict]:
         {
             "Temat": "Target",
             "Wartość": (
-                "Polskie firmy (sp. z o.o. / S.A. / JDG) działające w Niemczech: "
-                "wyposażenie sklepów, posadzki, budownictwo, podwykonawcy. "
-                "Bez urzędów, portali i czysto niemieckich GmbH."
+                "Polskie firmy wykonawcze / podwykonawcy działające w Niemczech: "
+                "budownictwo, wykończenia, sklepy, drogerie, restauracje, hale, instalacje. "
+                "Bez urzędów, portali i czysto niemieckich GU/GmbH."
             ),
         },
         {
@@ -1149,15 +1161,42 @@ def save_excel(rows, path: Path, logger: logging.Logger, cache=None) -> None:
         )
         state_rows = build_bundesland_rows(rows_for_excel)
         existing_sheets = load_existing_excel_sheets(path, logger)
+        excluded_urls = _cache_urls_excluded_from_excel(cache)
+        existing_kontakte = existing_sheets.get("Kontakte", []) or []
+        existing_szczegoly = (
+            existing_sheets.get("Szczegoly")
+            or existing_sheets.get("Wojewodztwa")
+            or []
+        )
+        if excluded_urls:
+            before_k = len(existing_kontakte)
+            existing_kontakte = [
+                r
+                for r in existing_kontakte
+                if _excel_row_url_normalized(r) not in excluded_urls
+            ]
+            before_s = len(existing_szczegoly)
+            existing_szczegoly = [
+                r
+                for r in existing_szczegoly
+                if _excel_row_url_normalized(r) not in excluded_urls
+            ]
+            dropped = (before_k - len(existing_kontakte)) + (
+                before_s - len(existing_szczegoly)
+            )
+            if dropped and logger is not None:
+                logger.info(
+                    "Excel: usunięto %s starych wierszy (verification_reason wykluczony, np. %s)",
+                    dropped,
+                    VERIFICATION_REASON_NO_FILIALBAU,
+                )
         export_rows, _, _ = merge_export_rows_append(
-            existing_sheets.get("Kontakte", []),
+            existing_kontakte,
             export_rows,
             logger=logger,
         )
         state_rows, _, _ = merge_bundesland_rows_append(
-            existing_sheets.get("Szczegoly")
-            or existing_sheets.get("Wojewodztwa")
-            or [],
+            existing_szczegoly,
             state_rows,
             logger=logger,
         )
@@ -1782,8 +1821,52 @@ def _row_passes_strict_retail_filters(row: dict) -> bool:
     return True
 
 
+def _verification_reason_excludes_excel(row: dict) -> bool:
+    reason = (row.get("verification_reason") or "").strip()
+    return reason in EXCEL_EXCLUDED_VERIFICATION_REASONS
+
+
+def _cache_urls_excluded_from_excel(cache: dict | None) -> set[str]:
+    """URL-e z cache z verification_reason wykluczającym Excel (do czyszczenia starych wierszy)."""
+    excluded: set[str] = set()
+    if not isinstance(cache, dict):
+        return excluded
+    contacts = cache.get("contacts") or {}
+    if not isinstance(contacts, dict):
+        return excluded
+    for place_url, info in contacts.items():
+        if not isinstance(info, dict):
+            continue
+        if not _verification_reason_excludes_excel(info):
+            continue
+        for raw in (
+            place_url,
+            info.get("official_website"),
+            info.get("www"),
+            info.get("url"),
+        ):
+            norm = normalize_website(str(raw or "").strip())
+            if norm:
+                excluded.add(norm.lower())
+    return excluded
+
+
+def _excel_row_url_normalized(row: dict) -> str:
+    raw = (
+        row.get("URL")
+        or row.get("url")
+        or row.get("Strona www")
+        or row.get("www")
+        or row.get("official_website")
+        or ""
+    )
+    return (normalize_website(str(raw).strip()) or "").lower()
+
+
 def is_row_eligible_for_excel_export(row: dict) -> bool:
     """Firma do arkusza Kontakte — polska firma z pracą w DE."""
+    if _verification_reason_excludes_excel(row):
+        return False
     name = (row.get("company_name_clean") or row.get("nazwa") or "").strip()
     url = (row.get("url") or row.get("www") or row.get("official_website") or "").strip()
     if name.lower() == "nieznana firma" and not url:
@@ -1876,6 +1959,8 @@ def build_bundesland_rows(rows):
     seen = set()
     for row in rows:
         row = normalize_row_company_name(row)
+        if _verification_reason_excludes_excel(row):
+            continue
         table = row_to_excel_wojewodztwa_columns(row)
         row_name = (table.get("Nazwa firmy") or "").strip()
         row_url = (table.get("URL") or "").strip()
@@ -3218,18 +3303,21 @@ def resolve_is_small_firm(
 
 def page_mentions_retail_store_projects(text: str) -> tuple[bool, list[str], str]:
     """
-    GU/Filialbau (Neubau/Umbau Märkte) + dowód projektów marketów na www
-    (Referenzen, Portfolio, zdjęcia sklepów lub opisy projektów).
+    Weryfikacja www.
+    Kampania PL→DE (REQUIRE_GENERALUNTERNEHMER=False): polski podwykonawca / fit-out / budowa.
+    Legacy DE GU: Filialbau + markety.
     """
     low = (text or "").lower()
     if is_retail_store_operator_contact(text=low):
         return False, [], "einzelhandel_betrieb_kein_bau"
+    if not REQUIRE_GENERALUNTERNEHMER:
+        return page_mentions_pl_builder_projects(text)
     if REQUIRE_GENERALUNTERNEHMER:
         gu_ok, _ = qualifies_as_gu_for_campaign(low)
         if not gu_ok:
             return False, [], "kein_generalunternehmer"
     if not mentions_retail_store_build_activity_core(low):
-        return False, [], "kein_gu_filialbau_kontext"
+        return False, [], VERIFICATION_REASON_NO_FILIALBAU
     if REQUIRE_MARKET_PROJECTS_IN_PORTFOLIO and not has_retail_references_or_portfolio(
         low
     ):
@@ -4691,9 +4779,12 @@ def discover_places_with_serper(
 
     rows = []
     seen = set()
-    candidate_filter = (
-        is_serper_only_pending_candidate if serper_only else is_loose_serper_discovery_candidate
-    )
+    if not REQUIRE_GENERALUNTERNEHMER:
+        candidate_filter = is_pl_de_serper_discovery_candidate
+    else:
+        candidate_filter = (
+            is_serper_only_pending_candidate if serper_only else is_loose_serper_discovery_candidate
+        )
     buckets: tuple[str, ...] = ("places",) if use_places_endpoint else ("organic", "places")
     for bucket in buckets:
         for item in data.get(bucket, []) or []:

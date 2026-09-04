@@ -41,11 +41,16 @@ RETAIL_CONTACT_LINK_KEYWORDS = _ost.RETAIL_CONTACT_LINK_KEYWORDS
 SERPER_POSITIVE_TERMS = (
     "niemcy",
     "deutschland",
-    "ladenbau",
+    "podwykonawca",
+    "budowlana",
+    "wykończenia",
     "posadzki",
     "wyposażenie sklepów",
+    "ladenbau",
     "innenausbau",
-    "podwykonawca",
+    "hale",
+    "restauracje",
+    "drogerie",
 )
 SERPER_NEGATIVE_TERMS = tuple(
     dict.fromkeys((*_PL_SERPER_NEGATIVE, *(_ost.SERPER_NEGATIVE_TERMS or ())))
@@ -160,11 +165,12 @@ def build_discovery_terms(
                     return terms
     if len(lands) >= 10:
         nationwide = (
-            "wyposażenie sklepów Polska Niemcy {chain}",
-            "posadzki sklepowe Niemcy {chain}",
-            "podwykonawca budowa sklepów Deutschland {chain}",
-            "Ladenbau Firma Polska {chain}",
+            "podwykonawca budowlany Polska Niemcy {chain}",
             "firma budowlana realizacje Niemcy {chain}",
+            "wyposażenie sklepów Polska Niemcy {chain}",
+            "wykończenia restauracje hotele Niemcy {chain}",
+            "posadzki przemysłowe hale Niemcy {chain}",
+            "Ladenbau Firma Polska {chain}",
         )
         for tmpl in nationwide:
             chain = _rotating_chain(chain_counter)

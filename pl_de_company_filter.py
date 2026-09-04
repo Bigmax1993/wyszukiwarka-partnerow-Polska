@@ -66,9 +66,15 @@ _DE_WORK_MARKERS = (
     "realizacje w niemczech",
     "referenz",
     "referencje niemcy",
+    "prace w niemczech",
+    "budowy w niemczech",
+    "montage deutschland",
     "ladenbau",
     "innenausbau",
     "filialbau",
+    "gewerbebau",
+    "industriebau",
+    "hallenbau",
     "nrw",
     "bayern",
     "sachsen",
@@ -87,11 +93,39 @@ _DE_WORK_MARKERS = (
 )
 
 _TRADE_MARKERS = (
+    # sklepy / retail fit-out
     "wyposażenie sklep",
     "wyposazenie sklep",
     "meble sklep",
     "montaż sklep",
     "montaz sklep",
+    "obiekt handlow",
+    "obiekty handlow",
+    "centrum handlow",
+    "ladenbau",
+    "shopfitting",
+    "shop fitting",
+    "innenausbau",
+    "fit-out",
+    "fit out",
+    "ladeneinrichtung",
+    # drogerie / gastro / hotele
+    "drogeri",
+    "rossmann",
+    "restauracj",
+    "gastronom",
+    "wykończenie restaur",
+    "wykonczenie restaur",
+    "hotel",
+    # hale / przemysł
+    "hala przemysł",
+    "hala przemysl",
+    "hale przemysł",
+    "hale magazyn",
+    "magazyn",
+    "industriebau",
+    "gewerbebau",
+    "hallenbau",
     "posadzk",
     "żywice",
     "zywice",
@@ -99,22 +133,39 @@ _TRADE_MARKERS = (
     "plytk",
     "wykładzin",
     "wykladzin",
-    "ladenbau",
-    "shopfitting",
-    "innenausbau",
-    "fit-out",
-    "fit out",
+    "estrich",
+    "bodenbelag",
+    # ogólne budownictwo / podwykonawstwo
     "podwykonaw",
+    "subunternehmer",
+    "nachunternehmer",
     "budowl",
     "wykończeni",
     "wykonczeni",
+    "remont",
+    "zabudow",
+    "suche zabudow",
+    "trockenbau",
+    "płyty gips",
+    "plyty gips",
+    "elewacj",
+    "fassade",
     "klimatyzac",
     "chłodnict",
     "chlodnict",
     "elektry",
+    "elektroinstallation",
     "wentylac",
+    "lüftung",
+    "hvac",
+    "sanitar",
+    "sanitär",
+    "stolarka",
+    "witryn",
     "regał",
     "regal sklep",
+    "konstrukcj stal",
+    "konstrukcje stal",
 )
 
 _REJECT_MARKERS = (
@@ -179,6 +230,121 @@ def has_germany_work_evidence(text: str) -> bool:
 def has_target_trade(text: str) -> bool:
     low = (text or "").lower()
     return any(m in low for m in _TRADE_MARKERS)
+
+
+_COMMERCIAL_OBJECT_MARKERS = (
+    "sklep",
+    "markt",
+    "filial",
+    "supermarkt",
+    "discounter",
+    "drogeri",
+    "rossmann",
+    "restauran",
+    "gastronom",
+    "hotel",
+    "halle",
+    "magazyn",
+    "lager",
+    "gewerbe",
+    "industri",
+    "obiekt handlow",
+    "centrum handlow",
+    "einkauf",
+    "laden",
+    "shop",
+)
+
+
+def has_commercial_or_industrial_object_context(text: str) -> bool:
+    low = (text or "").lower()
+    return any(m in low for m in _COMMERCIAL_OBJECT_MARKERS)
+
+
+def mentions_pl_builder_activity(text: str) -> bool:
+    """
+    Polska firma wykonawcza / podwykonawcza wokół budownictwa i fit-out
+    (sklepy, drogerie, gastro, hale) — bez wymogu niemieckiego GU/Filialbau.
+    """
+    low = (text or "").lower()
+    if not has_target_trade(low):
+        return False
+    # branża wystarczy; kontekst obiektu handlowego/przemysłowego wzmacnia, ale nie jest obowiązkowy
+    # gdy fraza już zawiera „budowl/podwykonaw/posadzk/…”
+    return True
+
+
+def is_pl_de_serper_discovery_candidate(
+    *,
+    email: str = "",
+    url: str = "",
+    name: str = "",
+    text: str = "",
+    search_term: str = "",
+) -> bool:
+    """
+    Filtr Serper dla kampanii PL→DE: polski trop LUB .pl + branża budowlana/fit-out
+    + ślad Niemiec w snippecie lub w frazie wyszukiwania.
+    Nie wymaga Generalunternehmer / Filialbau.
+    """
+    if is_rejected_non_target(name=name, url=url, email=email, text=text):
+        return False
+    blob = _blob(name=name, url=url, email=email, text=text)
+    term = (search_term or "").strip()
+    combined = f"{blob} {term}".strip()
+    low = combined.lower()
+
+    polish = (
+        has_polish_legal_form(name)
+        or has_polish_domain(url, email)
+        or has_polish_address_signal(blob)
+        or ".pl" in (url or "").lower()
+        or "polska" in low
+        or "poland" in low
+        or " polen" in f" {low} "
+    )
+    if not polish and is_german_only_entity(name=name, url=url, email=email, text=text):
+        return False
+    if not polish and not any(
+        m in low for m in ("polska", "poland", "polen", "sp. z o.o", "sp zoo", ".pl")
+    ):
+        # bez polskiego tropu — tylko jeśli fraza Serper jest PL-oriented
+        if not any(m in term.lower() for m in ("polska", "polen", "niemcy", "podwykonawca")):
+            return False
+
+    if not (has_target_trade(low) or has_commercial_or_industrial_object_context(low)):
+        return False
+    if not has_germany_work_evidence(low) and not any(
+        m in term.lower() for m in ("niemcy", "deutschland", "germany")
+    ):
+        return False
+    return True
+
+
+def page_mentions_pl_builder_projects(text: str) -> tuple[bool, list[str], str]:
+    """Weryfikacja www: branża wykonawcza PL (nie GU Filialbau)."""
+    low = (text or "").lower()
+    if not mentions_pl_builder_activity(low):
+        return False, [], "kein_bau_gewerbe_kontext"
+    chains = [
+        c
+        for c in (
+            "aldi",
+            "rewe",
+            "edeka",
+            "netto",
+            "penny",
+            "kaufland",
+            "lidl",
+            "rossmann",
+            "dm",
+        )
+        if c in low
+    ]
+    if has_germany_work_evidence(low) or has_commercial_or_industrial_object_context(low):
+        return True, chains, "pl_podwykonawca_bau"
+    # Polska strona z branżą budowlaną — pending DE może dojść z Serper; tu akceptujemy kontekst branżowy
+    return True, chains, "pl_bau_branża"
 
 
 def _blob(*, name: str = "", url: str = "", email: str = "", text: str = "") -> str:

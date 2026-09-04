@@ -220,27 +220,39 @@ RETAIL_CHAINS_ROTATION = (
     "DM",
     "Edeka",
     "Rewe",
+    "Netto",
+    "Penny",
 )
 
+# Frazy Serper: siedziba w PL + praca / realizacje w DE.
+# Branże: sklepy, drogerie, restauracje, hale, wykończenia, instalacje — nie niemieccy GU.
 CHAIN_SIMPLE_TERM_TEMPLATES = (
-    "wyposażenie sklepów {city} Niemcy",
-    "meble sklepowe montaż Niemcy {city}",
-    "Ladenbau Firma {city} Deutschland",
-    "posadzki żywiczne Niemcy {city}",
-    "posadzki sklepowe {city} {chain}",
-    "podwykonawca budowa sklepów Niemcy {city}",
-    "Innenausbau Polen {city}",
-    "montaż sklepów {chain} Niemcy {city}",
-    "wykończenia wnętrz obiekty handlowe Niemcy {city}",
+    "podwykonawca budowlany {city} Niemcy",
     "firma budowlana {city} realizacje Niemcy",
+    "wyposażenie sklepów {city} Niemcy",
+    "wykończenia wnętrz sklepy restauracje Niemcy {city}",
+    "posadzki przemysłowe {city} Niemcy",
+    "posadzki sklepowe {city} {chain}",
+    "montaż sklepów drogerii {chain} Niemcy {city}",
+    "hale przemysłowe {city} Niemcy",
+    "instalacje elektryczne budynki Niemcy {city}",
+    "klimatyzacja wentylacja obiekty handlowe Niemcy {city}",
+    "suche zabudowy GK obiekty Niemcy {city}",
+    "Ladenbau Firma Polska {city}",
+    "Innenausbau Polen {city} Deutschland",
+    "fit-out sklepy restauracje Niemcy {city}",
+    "stolarka aluminiowa witryny Niemcy {city}",
 )
 
 TERM_TEMPLATES = (
+    "podwykonawca {city} {wojewodztwo} budownictwo Niemcy",
+    "firma budowlana {city} realizacje Deutschland {chain}",
     "wyposażenie sklepów {city} {wojewodztwo} Niemcy {chain}",
-    "posadzki sklepowe Lidl Aldi {city}",
-    "montaż sklepów Kaufland Rossmann Niemcy {city}",
-    "podwykonawca {city} budowa marketów Niemcy",
-    "firma {city} Ladenbau Deutschland",
+    "wykończenia restauracje hotele Niemcy {city}",
+    "posadzki żywiczne hale magazyny Niemcy {city}",
+    "montaż drogerii Rossmann DM Niemcy {city}",
+    "instalacje HVAC sklepy Niemcy {city}",
+    "obiekty handlowe {city} podwykonawca Niemcy",
 )
 
 SIMPLE_TERM_TEMPLATES = CHAIN_SIMPLE_TERM_TEMPLATES
@@ -270,6 +282,8 @@ SERPER_NEGATIVE_TERMS = (
     "przetarg",
     "bip.gov.pl",
     "gov.pl",
+    "generalunternehmer",
+    "generalübernehmer",
 )
 
 POLISH_LEGAL_FORM_MARKERS = (

@@ -133,13 +133,14 @@ def build_page_verify_prompt(
     small_kw = ", ".join(small_company_markers_sample())
     large_kw = ", ".join(large_company_markers_sample())
     return f"""ROLLE
-Jesteś analitykiem due-diligence B2B. Target: POLSKA firma wykonawcza / wyposażeniowa,
-która REALNIE działa na terenie Niemiec (posadzki, meble sklepowe, Ladenbau, Innenausbau,
-budownictwo, podwykonawstwo — elektryka, HVAC, GK, witryny).
+Jesteś analitykiem due-diligence B2B. Target: POLSKA firma wykonawcza / podwykonawcza,
+która REALNIE działa na terenie Niemiec — budownictwo i fit-out obiektów komercyjnych:
+sklepy, drogerie, restauracje/hotele, hale przemysłowe/magazyny, instalacje, wykończenia,
+posadzki, wyposażenie sklepów (Ladenbau/Innenausbau).
 
-Shopfitting / posadzki / wyposażenie sklepów = TAK, to jest cel.
-KEIN Ziel: urzędy, portale, agencje pracy, deweloperzy mieszkaniowi, sieci handlowe jako operatorzy,
-czysto niemieckie GmbH bez polskiego podmiotu, firmy tylko na PL bez śladu pracy w DE.
+KEIN Ziel: niemieccy Generalunternehmer jako główny target, urzędy, portale, agencje pracy,
+deweloperzy mieszkaniowi, sieci handlowe jako operatorzy, czysto niemieckie GmbH bez PL,
+firmy tylko na PL bez śladu pracy w DE.
 
 AUFGABE
 Przeczytaj cały wyciąg strony (podstrony === URL ===). Pasuje do targetu?
@@ -185,10 +186,12 @@ HILFS
 
 BEISPIELE
 ✓ JA: „Montaż sklepów Lidl w Niemczech" + sp. z o.o. Wrocław
-✓ JA: posadzki żywiczne, referencje Aldi/Kaufland DE
-✓ JA: meble sklepowe, realizacje Rossmann Deutschland
+✓ JA: posadzki żywiczne hale, referencje Aldi/Kaufland DE
+✓ JA: wykończenia restauracji / drogerii Rossmann Deutschland
+✓ JA: instalacje HVAC / suche zabudowy obiekty handlowe DE
 ✗ NEIN: samo GmbH z NRW bez polskiego podmiotu
 ✗ NEIN: agencja pracy / OLX / urząd gminy
+✗ NEIN: czysty niemiecki Generalunternehmer Filialbau bez PL
 ✗ NEIN: Biedronka jako sieć handlowa
 ✗ NEIN: polski deweloper mieszkań bez DE
 
