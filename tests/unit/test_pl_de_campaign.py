@@ -90,6 +90,48 @@ class TestPolishDeFilter:
             search_term="podwykonawca budowlany Wrocław Niemcy",
         )
 
+    def test_rejects_social_jobs_and_directories(self):
+        from pl_de_company_filter import (
+            is_blocked_public_portal,
+            is_pl_de_serper_discovery_candidate,
+        )
+
+        cases = (
+            ("https://pl.linkedin.com/company/firma", "LinkedIn"),
+            ("https://www.facebook.com/firma.budowlana", "Facebook"),
+            ("https://www.pracuj.pl/praca/monter", "Pracuj.pl"),
+            ("https://pl.indeed.com/viewjob", "Indeed"),
+            ("https://www.panoramafirm.pl/wroclaw/budowlana.html", "Panorama Firm"),
+            ("https://www.olx.pl/praca/", "OLX"),
+            ("https://www.muratorplus.pl/biznes/firma-x", "Murator Plus"),
+            ("https://www.baunetz.de/meldungen/firma", "BauNetz"),
+            ("https://www.ibau.de/ausschreibungen", "ibau"),
+            ("https://www.northdata.de/Firma", "North Data"),
+        )
+        for url, name in cases:
+            assert is_blocked_public_portal(url=url, name=name), url
+            assert not is_pl_de_serper_discovery_candidate(
+                name=name,
+                url=url,
+                text="podwykonawca budowlany sklepy Niemcy Wrocław",
+                search_term="podwykonawca budowlany Niemcy Wrocław",
+            ), url
+
+    def test_keeps_real_company_pl_site(self):
+        from pl_de_company_filter import is_blocked_public_portal, is_pl_de_serper_discovery_candidate
+
+        assert not is_blocked_public_portal(
+            url="https://ergostore.pl",
+            name="Ergo Store sp. z o.o.",
+            text="Meble sklepowe montaż Lidl Niemcy",
+        )
+        assert is_pl_de_serper_discovery_candidate(
+            name="Ergo Store sp. z o.o.",
+            url="https://ergostore.pl",
+            text="Meble sklepowe montaż Lidl Niemcy referencje",
+            search_term="wyposażenie sklepów Niemcy Wrocław",
+        )
+
     def test_rejects_german_gmbh_only(self):
         from pl_de_company_filter import is_polish_company_operating_in_germany
 

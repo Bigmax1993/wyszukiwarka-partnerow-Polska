@@ -173,6 +173,8 @@ _REJECT_MARKERS = (
     "praca tymczasowa",
     "zeitarbeit",
     "oferty pracy",
+    "portal pracy",
+    "portale pracy",
     "deweloper mieszkaniowy",
     "osiedle mieszkaniowe",
     "biedronka",
@@ -183,6 +185,13 @@ _REJECT_MARKERS = (
     "panorama firm",
     "pkt.pl",
     "katalog firm",
+    "katalog branżowy",
+    "portal branżowy",
+    "portale branżowe",
+    "branchenportal",
+    "fachportal",
+    "bauportal",
+    "portal budowlany",
     "gov.pl",
     "bip.",
     "urząd",
@@ -199,6 +208,163 @@ _REJECT_MARKERS = (
     "moving company",
     "umzug",
 )
+
+# Domena = katalog / social / praca / urząd — nie strona firmy wykonawczej.
+BLOCKED_PUBLIC_PORTAL_HOST_SUFFIXES = (
+    # social
+    "facebook.com",
+    "fb.com",
+    "instagram.com",
+    "linkedin.com",
+    "xing.com",
+    "twitter.com",
+    "x.com",
+    "tiktok.com",
+    "youtube.com",
+    "youtu.be",
+    "pinterest.com",
+    "threads.net",
+    "snapchat.com",
+    "vk.com",
+    # praca
+    "pracuj.pl",
+    "praca.pl",
+    "jobs.pl",
+    "indeed.com",
+    "indeed.pl",
+    "stepstone.de",
+    "stepstone.pl",
+    "jooble.org",
+    "infopraca.pl",
+    "gowork.pl",
+    "goldenline.pl",
+    "nofluffjobs.com",
+    "justjoin.it",
+    "rocketjobs.pl",
+    "monster.de",
+    "monster.com",
+    "arbeitsagentur.de",
+    "olx.pl",
+    "olx.de",
+    "gratka.pl",
+    "gumtree.pl",
+    # katalogi / portale publiczne
+    "aleo.com",
+    "aleo.pl",
+    "pkt.pl",
+    "panoramafirm.pl",
+    "firmy.org.pl",
+    "biznesfinder.pl",
+    "krs-pobierz.pl",
+    "ceidg.gov.pl",
+    "gov.pl",
+    "wikipedia.org",
+    "gelbeseiten.de",
+    "11880.com",
+    "wlw.de",
+    "europages.com",
+    "europages.pl",
+    "oferteo.pl",
+    "fixly.pl",
+    "cylex.pl",
+    "cylex.de",
+    "dasoertliche.de",
+    "money.pl",
+    "bankier.pl",
+    "maps.google.com",
+    "maps.google.pl",
+    # portale / media branżowe PL+DE
+    "muratorplus.pl",
+    "murator.pl",
+    "rynekinstalacyjny.pl",
+    "infobudowa.pl",
+    "infobudownictwo.pl",
+    "builder.pl",
+    "propertydesign.pl",
+    "propertynews.pl",
+    "urbanity.pl",
+    "rynekpierwotny.pl",
+    "portalbudowlany.pl",
+    "e-budownictwo.pl",
+    "ebudownictwo.pl",
+    "izolacje.com.pl",
+    "oknonet.pl",
+    "znanyfachowiec.pl",
+    "fachowcy.pl",
+    "pzpb.pl",
+    "baunetz.de",
+    "baulinks.de",
+    "bauportal.de",
+    "ibau.de",
+    "ibau.com",
+    "presseportal.de",
+    "openpr.de",
+    "detail.de",
+    "dbz.de",
+    "bauindustrie.de",
+    "zdb.de",
+    "firmenwissen.de",
+    "northdata.de",
+    "northdata.com",
+    "unternehmensregister.de",
+    "handelsregister.de",
+    "bundesanzeiger.de",
+    "kompany.com",
+    "architonic.com",
+    "hoerbiger.com",
+)
+
+# Fragment hosta — katalog/portal branżowy, nie strona wykonawcy.
+_BLOCKED_PUBLIC_PORTAL_HOST_MARKERS = (
+    "portalbudowl",
+    "portal-budowl",
+    "bauportal",
+    "branchenportal",
+    "fachportal",
+    "infobudow",
+    "branchenbuch",
+    "firmenverzeichnis",
+    "katalogfirm",
+    "katalog-firm",
+    "bizneskatalog",
+    "firmendatenbank",
+    "ausschreibungsportal",
+    "vergabemarktplatz",
+)
+
+
+def _host_has_blocked_suffix(host: str) -> bool:
+    h = (host or "").strip().lower()
+    if h.startswith("www."):
+        h = h[4:]
+    if not h:
+        return False
+    for suffix in BLOCKED_PUBLIC_PORTAL_HOST_SUFFIXES:
+        if h == suffix or h.endswith("." + suffix):
+            return True
+    if any(m in h for m in _BLOCKED_PUBLIC_PORTAL_HOST_MARKERS):
+        return True
+    return False
+
+
+def is_blocked_public_portal(
+    *,
+    url: str = "",
+    email: str = "",
+    name: str = "",
+    text: str = "",
+) -> bool:
+    """True = social, praca, katalog, portal branżowy, urząd — omijać od razu."""
+    for raw in (url, email):
+        if _host_has_blocked_suffix(_normalize_host(raw)):
+            return True
+    low_url = (url or "").lower()
+    if "google." in low_url and "/maps" in low_url:
+        return True
+    blob = _blob(name=name, url=url, email=email, text=text).lower()
+    if any(m in blob for m in _REJECT_MARKERS):
+        return True
+    return False
 
 
 def _normalize_host(url_or_email: str) -> str:
@@ -365,6 +531,8 @@ def _blob(*, name: str = "", url: str = "", email: str = "", text: str = "") -> 
 
 def is_rejected_non_target(name: str = "", url: str = "", email: str = "", text: str = "") -> bool:
     blob = _blob(name=name, url=url, email=email, text=text).lower()
+    if is_blocked_public_portal(url=url, email=email, name=name, text=text):
+        return True
     if any(m in blob for m in _REJECT_MARKERS):
         return True
     if is_non_commercial_contact(email=email, url=url, name=name):

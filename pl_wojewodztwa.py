@@ -284,6 +284,21 @@ SERPER_NEGATIVE_TERMS = (
     "gov.pl",
     "generalunternehmer",
     "generalübernehmer",
+    "facebook",
+    "linkedin",
+    "instagram",
+    "tiktok",
+    "pracuj.pl",
+    "indeed",
+    "stepstone",
+    "gowork",
+    "katalog firm",
+    "portal pracy",
+    "portal branżowy",
+    "muratorplus",
+    "baunetz",
+    "baulinks",
+    "ibau",
 )
 
 POLISH_LEGAL_FORM_MARKERS = (

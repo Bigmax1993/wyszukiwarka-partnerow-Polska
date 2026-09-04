@@ -673,10 +673,15 @@ from mfg_gu_email_attachment import (
     ensure_mfg_email_attachment,
 )
 from pl_de_company_filter import (
+    BLOCKED_PUBLIC_PORTAL_HOST_SUFFIXES,
+    is_blocked_public_portal,
     is_pl_de_serper_discovery_candidate,
     is_polish_company_operating_in_germany,
     needs_review_missing_de_evidence,
     page_mentions_pl_builder_projects,
+)
+SERPER_BAD_DOMAINS = list(
+    dict.fromkeys((*SERPER_BAD_DOMAINS, *BLOCKED_PUBLIC_PORTAL_HOST_SUFFIXES))
 )
 _OST_GU_SMTP_DEFAULT_HOST = "serwer.home.pl"
 _OST_GU_SMTP_PORT_SSL = 465
@@ -3934,6 +3939,8 @@ def score_serper_candidate(link: str, title: str = "", snippet: str = "", compan
     score = 0
     if not link:
         return -999
+    if is_blocked_public_portal(url=link, name=title or company_name, text=snippet):
+        return -999
     if any(bad in text for bad in SERPER_BAD_DOMAINS):
         score -= 120
     if "impressum" in text or "kontakt" in text or "contact" in text:
@@ -4881,6 +4888,14 @@ def discover_places_with_serper(
                 funnel["raw_hits"] = funnel.get("raw_hits", 0) + 1
             link = normalize_website(item.get("link") or item.get("website") or "")
             if not link or link in seen:
+                continue
+            title_pre = (item.get("title") or "").strip()
+            snippet_pre = (item.get("snippet") or item.get("address") or "").strip()
+            if is_blocked_public_portal(
+                url=link, name=title_pre, text=f"{title_pre} {snippet_pre}"
+            ):
+                if funnel is not None:
+                    funnel["filtered_serper"] = funnel.get("filtered_serper", 0) + 1
                 continue
             if not is_germany_de_candidate(
                 link, item.get("title", ""), item.get("snippet", "")
