@@ -398,7 +398,36 @@ def _list_folder_files(service, parent_id: str) -> list[dict]:
             service.files()
             .list(
                 q=f"'{parent_id}' in parents and trashed = false",
-                fields="nextPageToken,files(id,name,mimeType)",
+                fields="nextPageToken,files(id,name,mimeType,parents)",
+                pageSize=100,
+                pageToken=page_token,
+                corpora="allDrives",
+                **_LIST_OPTS,
+            )
+            .execute()
+        )
+        files.extend(res.get("files") or [])
+        page_token = res.get("nextPageToken")
+        if not page_token:
+            break
+    return files
+
+
+def _search_kontakte_xlsx_anywhere(service) -> list[dict]:
+    """Szuka kontakte*.xlsx na całym Drive (gdy plik nie leży w GDRIVE_FOLDER_ID)."""
+    q = (
+        "trashed = false and mimeType != 'application/vnd.google-apps.folder' "
+        "and (name contains 'de_gu_bauunternehmen_kontakte' "
+        "or name contains 'bauunternehmen_kontakte')"
+    )
+    files: list[dict] = []
+    page_token = None
+    while True:
+        res = (
+            service.files()
+            .list(
+                q=q,
+                fields="nextPageToken,files(id,name,mimeType,parents)",
                 pageSize=100,
                 pageToken=page_token,
                 corpora="allDrives",
@@ -431,12 +460,42 @@ def delete_kontakte_xlsx_from_drive(
 ) -> int:
     """Usuwa z Drive wszystkie de_gu_bauunternehmen_kontakte*.xlsx (do kosza)."""
     deleted = 0
-    for item in _list_folder_files(service, folder_id):
+    listed = _list_folder_files(service, folder_id)
+    print(f"Pliki w folderze {folder_id} ({len(listed)}):")
+    for item in listed:
         name = item.get("name") or ""
-        if item.get("mimeType") == "application/vnd.google-apps.folder":
-            continue
-        if not _is_kontakte_xlsx_name(name):
-            continue
+        mime = item.get("mimeType") or ""
+        print(f"  - {name} [{mime}]")
+
+    candidates = [
+        item
+        for item in listed
+        if item.get("mimeType") != "application/vnd.google-apps.folder"
+        and (
+            _is_kontakte_xlsx_name(item.get("name") or "")
+            or (
+                (item.get("name") or "").lower().endswith(".xlsx")
+                and (
+                    "kontakte" in (item.get("name") or "").lower()
+                    or "bauunternehmen" in (item.get("name") or "").lower()
+                )
+            )
+        )
+    ]
+    if not candidates:
+        print("Brak dopasowania w folderze — szukam na całym Drive…")
+        found = _search_kontakte_xlsx_anywhere(service)
+        print(f"Wyniki wyszukiwania globalnego ({len(found)}):")
+        for item in found:
+            print(f"  - {item.get('name')} id={item.get('id')} parents={item.get('parents')}")
+        candidates = [
+            item
+            for item in found
+            if (item.get("name") or "").lower().endswith(".xlsx")
+        ]
+
+    for item in candidates:
+        name = item.get("name") or ""
         fid = item["id"]
         if dry_run:
             print(f"  DRY-RUN delete {name} ({fid})")
