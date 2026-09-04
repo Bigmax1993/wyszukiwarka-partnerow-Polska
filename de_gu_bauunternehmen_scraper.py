@@ -6954,52 +6954,72 @@ def _run_smoke_tests() -> None:
         ]
     )
     assert len(rows_export) == 1 and rows_export[0].get("E-mail") == "biuro@ergostore.pl"
-    ok_laden_only, chains_laden_only, reason_laden_only = page_mentions_retail_store_projects(
-        "Wir realisieren Aldi und Rewe Filialneubau im Ladenbau in Sachsen. Referenzen."
-    )
-    assert ok_laden_only and "aldi" in chains_laden_only
-    assert reason_laden_only.startswith("filialbau") or reason_laden_only.startswith("kette_")
-    ok, chains, _ = page_mentions_retail_store_projects(
-        "Generalunternehmer: Wir realisieren Aldi und Rewe Filialneubau im Ladenbau in Sachsen. Referenzen."
-    )
-    assert ok and "aldi" in chains
-    ok_hb, chains_hb, _ = page_mentions_retail_store_projects(
-        "Generalunternehmer Hochbau: Aldi-Filialgebäude und Kaufland-Neubau in Sachsen. Referenzprojekte."
-    )
-    assert ok_hb and "aldi" in chains_hb
-    ok_ohne, _, reason_ohne = page_mentions_retail_store_projects(
-        "Generalunternehmer Filialbau Supermarkt Neubau. "
-        "Wir bauen Discounter im Einzelhandel."
-    )
-    assert ok_ohne
-    ok_opis, _, reason_opis = page_mentions_retail_store_projects(
-        "Generalunternehmer Filialbau. Wir realisieren Neubau Aldi Supermarkt "
-        "für Discounter — Projektbeschreibung mit Details."
-    )
-    assert ok_opis and (
-        reason_opis == "markt_referenz_nachweis"
-        or reason_opis.startswith("referenz")
-        or reason_opis.startswith("kette_")
-    )
-    ok_nur_ref, _, reason_nur = page_mentions_retail_store_projects(
-        "Generalunternehmer Filialbau. Referenzen Hallenbau und Bürobau — keine Supermarktprojekte."
-    )
-    assert not ok_nur_ref and reason_nur == "kein_markt_nachweis"
-    ok_foto, chains_foto, reason_foto = page_mentions_retail_store_projects(
-        "Generalunternehmer Filialbau Sachsen. Fotogalerie — Rewe Markt Neubau Cottbus, "
-        "Bilder Supermarkt Umbau. alt-kaufland-filiale.jpg"
-    )
-    assert ok_foto and "rewe" in chains_foto
-    assert "referenz" in reason_foto or "kette" in reason_foto
-    ok_ref, chains_ref, reason_ref = page_mentions_retail_store_projects(
-        "Generalunternehmer Filialbau. Referenzprojekte Aldi und Rewe. Unsere Projekte."
-    )
-    assert ok_ref and "referenz" in reason_ref
-    assert "aldi" in chains_ref
-    ok_shop, _, reason_shop = page_mentions_retail_store_projects(
-        "REWE Markt Erfurt — Öffnungszeiten und Wochenangebot. Filialfinder."
-    )
-    assert not ok_shop and reason_shop == "einzelhandel_betrieb_kein_bau"
+    if not REQUIRE_GENERALUNTERNEHMER:
+        # Kampania PL→DE: podwykonawca / fit-out, nie niemiecki GU Filialbau.
+        ok_pl, chains_pl, reason_pl = page_mentions_retail_store_projects(
+            "Posadzki żywiczne i montaż sklepów Lidl Niemcy. Referencje Deutschland."
+        )
+        assert ok_pl and "lidl" in chains_pl
+        assert reason_pl.startswith("pl_")
+        ok_gastro, _, reason_gastro = page_mentions_retail_store_projects(
+            "Wykończenia restauracji i hoteli — realizacje w Niemczech."
+        )
+        assert ok_gastro and reason_gastro.startswith("pl_")
+        ok_no, _, reason_no = page_mentions_retail_store_projects(
+            "Biuro meblowe katalog produktów bez budownictwa."
+        )
+        assert not ok_no and reason_no == VERIFICATION_REASON_NO_BAU
+        ok_shop, _, reason_shop = page_mentions_retail_store_projects(
+            "REWE Markt Erfurt — Öffnungszeiten und Wochenangebot. Filialfinder."
+        )
+        assert not ok_shop and reason_shop == "einzelhandel_betrieb_kein_bau"
+    else:
+        ok_laden_only, chains_laden_only, reason_laden_only = page_mentions_retail_store_projects(
+            "Wir realisieren Aldi und Rewe Filialneubau im Ladenbau in Sachsen. Referenzen."
+        )
+        assert ok_laden_only and "aldi" in chains_laden_only
+        assert reason_laden_only.startswith("filialbau") or reason_laden_only.startswith("kette_")
+        ok, chains, _ = page_mentions_retail_store_projects(
+            "Generalunternehmer: Wir realisieren Aldi und Rewe Filialneubau im Ladenbau in Sachsen. Referenzen."
+        )
+        assert ok and "aldi" in chains
+        ok_hb, chains_hb, _ = page_mentions_retail_store_projects(
+            "Generalunternehmer Hochbau: Aldi-Filialgebäude und Kaufland-Neubau in Sachsen. Referenzprojekte."
+        )
+        assert ok_hb and "aldi" in chains_hb
+        ok_ohne, _, reason_ohne = page_mentions_retail_store_projects(
+            "Generalunternehmer Filialbau Supermarkt Neubau. "
+            "Wir bauen Discounter im Einzelhandel."
+        )
+        assert ok_ohne
+        ok_opis, _, reason_opis = page_mentions_retail_store_projects(
+            "Generalunternehmer Filialbau. Wir realisieren Neubau Aldi Supermarkt "
+            "für Discounter — Projektbeschreibung mit Details."
+        )
+        assert ok_opis and (
+            reason_opis == "markt_referenz_nachweis"
+            or reason_opis.startswith("referenz")
+            or reason_opis.startswith("kette_")
+        )
+        ok_nur_ref, _, reason_nur = page_mentions_retail_store_projects(
+            "Generalunternehmer Filialbau. Referenzen Hallenbau und Bürobau — keine Supermarktprojekte."
+        )
+        assert not ok_nur_ref and reason_nur == "kein_markt_nachweis"
+        ok_foto, chains_foto, reason_foto = page_mentions_retail_store_projects(
+            "Generalunternehmer Filialbau Sachsen. Fotogalerie — Rewe Markt Neubau Cottbus, "
+            "Bilder Supermarkt Umbau. alt-kaufland-filiale.jpg"
+        )
+        assert ok_foto and "rewe" in chains_foto
+        assert "referenz" in reason_foto or "kette" in reason_foto
+        ok_ref, chains_ref, reason_ref = page_mentions_retail_store_projects(
+            "Generalunternehmer Filialbau. Referenzprojekte Aldi und Rewe. Unsere Projekte."
+        )
+        assert ok_ref and "referenz" in reason_ref
+        assert "aldi" in chains_ref
+        ok_shop, _, reason_shop = page_mentions_retail_store_projects(
+            "REWE Markt Erfurt — Öffnungszeiten und Wochenangebot. Filialfinder."
+        )
+        assert not ok_shop and reason_shop == "einzelhandel_betrieb_kein_bau"
     assert "schlüsselfertig" in RETAIL_BUILD_KEYWORDS
     assert len(SERPER_DISCOVERY_TERMS) >= 20
     assert "olx" in SERPER_NEGATIVE_TERMS or "ladeneinrichtung" in SERPER_NEGATIVE_TERMS
