@@ -1158,19 +1158,21 @@ def build_excel_info_sheet_rows() -> list[dict]:
 def save_excel(rows, path: Path, logger: logging.Logger, cache=None) -> None:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     try:
-        rows_for_excel = rows
+        eligible_rows = [r for r in rows if is_row_eligible_for_excel_export(r)]
+        rows_for_excel = eligible_rows
         if (
             logger is not None
             and cache is not None
             and is_row_llm_cleanup_enabled()
+            and eligible_rows
         ):
             label = "Claude"
             console_step(
-                f"{label}: Bereinigung vor Excel ({len(rows)} Zeilen)…"
+                f"{label}: Bereinigung vor Excel ({len(eligible_rows)} Zeilen)…"
             )
             rows_for_excel = [
                 enrich_row_with_llm_cleanup(dict(r), logger, cache)
-                for r in rows
+                for r in eligible_rows
             ]
         export_rows = build_export_rows(
             rows_for_excel, logger=logger, cache=cache
@@ -1178,33 +1180,33 @@ def save_excel(rows, path: Path, logger: logging.Logger, cache=None) -> None:
         state_rows = build_bundesland_rows(rows_for_excel)
         existing_sheets = load_existing_excel_sheets(path, logger)
         excluded_urls = _cache_urls_excluded_from_excel(cache)
+        dropped_ids = _identities_excluded_from_excel(rows, cache)
         existing_kontakte = existing_sheets.get("Kontakte", []) or []
         existing_szczegoly = (
             existing_sheets.get("Szczegoly")
             or existing_sheets.get("Wojewodztwa")
             or []
         )
-        if excluded_urls:
+        if excluded_urls or dropped_ids["urls"] or dropped_ids["emails"] or dropped_ids["names"]:
             before_k = len(existing_kontakte)
             existing_kontakte = [
                 r
                 for r in existing_kontakte
-                if _excel_row_url_normalized(r) not in excluded_urls
+                if not _excel_row_matches_excluded(r, excluded_urls, dropped_ids)
             ]
             before_s = len(existing_szczegoly)
             existing_szczegoly = [
                 r
                 for r in existing_szczegoly
-                if _excel_row_url_normalized(r) not in excluded_urls
+                if not _excel_row_matches_excluded(r, excluded_urls, dropped_ids)
             ]
             dropped = (before_k - len(existing_kontakte)) + (
                 before_s - len(existing_szczegoly)
             )
             if dropped and logger is not None:
                 logger.info(
-                    "Excel: usunięto %s starych wierszy (verification_reason wykluczony, np. %s)",
+                    "Excel: usunięto %s starych wierszy (poza kolejką wysyłki / verification_reason)",
                     dropped,
-                    VERIFICATION_REASON_NO_FILIALBAU,
                 )
         export_rows, _, _ = merge_export_rows_append(
             existing_kontakte,
@@ -1886,8 +1888,79 @@ def _excel_row_url_normalized(row: dict) -> str:
     return (normalize_website(str(raw).strip()) or "").lower()
 
 
+def _emails_from_contact_blob(email_target: str = "", emails_found: str = "") -> set[str]:
+    out: set[str] = set()
+    for raw in (email_target, emails_found):
+        for part in str(raw or "").split(","):
+            em = part.strip().lower()
+            if em and "@" in em:
+                out.add(em)
+    return out
+
+
+def _identities_excluded_from_excel(rows, cache: dict | None) -> dict[str, set[str]]:
+    """Nazwy / maile / URL firm, które nie wchodzą do kolejki wysyłki — do czyszczenia Excela."""
+    names: set[str] = set()
+    emails: set[str] = set()
+    urls: set[str] = set()
+
+    def _absorb(name: str, url: str, email_target: str, emails_found: str) -> None:
+        n = (name or "").strip().lower()
+        if n and n != "nieznana firma":
+            names.add(n)
+        for em in _emails_from_contact_blob(email_target, emails_found):
+            emails.add(em)
+        norm = (normalize_website(url or "") or "").lower()
+        if norm:
+            urls.add(norm)
+
+    for row in rows or []:
+        if is_row_eligible_for_excel_export(row):
+            continue
+        _absorb(
+            row.get("company_name_clean") or row.get("nazwa") or "",
+            row.get("url") or row.get("www") or row.get("official_website") or "",
+            row.get("email_target") or "",
+            row.get("emails_found") or "",
+        )
+    contacts = (cache or {}).get("contacts") if isinstance(cache, dict) else {}
+    if isinstance(contacts, dict):
+        for place_url, info in contacts.items():
+            if not isinstance(info, dict):
+                continue
+            if contact_qualifies_for_mail_queue(
+                info, place_url, skip_already_sent=False
+            ):
+                continue
+            _absorb(
+                info.get("company_name_clean")
+                or info.get("company_name")
+                or info.get("company_name_raw")
+                or "",
+                place_url or info.get("official_website") or "",
+                info.get("email_target") or "",
+                info.get("emails_found") or "",
+            )
+    return {"names": names, "emails": emails, "urls": urls}
+
+
+def _excel_row_matches_excluded(
+    row: dict, excluded_urls: set[str], dropped_ids: dict[str, set[str]]
+) -> bool:
+    url = _excel_row_url_normalized(row)
+    if url and (url in excluded_urls or url in dropped_ids.get("urls", set())):
+        return True
+    email = _excel_cell_str(row.get("E-mail") or row.get("email_target")).strip().lower()
+    if email and email in dropped_ids.get("emails", set()):
+        return True
+    name = _excel_cell_str(row.get("Nazwa firmy") or row.get("nazwa")).strip().lower()
+    if name and name in dropped_ids.get("names", set()):
+        return True
+    return False
+
+
 def is_row_eligible_for_excel_export(row: dict) -> bool:
-    """Firma do arkusza Kontakte — polska firma z pracą w DE."""
+    """Tylko firmy, które mogłyby wejść do kolejki wysyłki (także już sent)."""
     if _verification_reason_excludes_excel(row):
         return False
     name = (row.get("company_name_clean") or row.get("nazwa") or "").strip()
@@ -1895,6 +1968,8 @@ def is_row_eligible_for_excel_export(row: dict) -> bool:
     if name.lower() == "nieznana firma" and not url:
         return False
     email = (row.get("email_target") or "").strip()
+    if not email:
+        return False
     text = _row_chain_context_text(row)
     if is_excluded_kontrahent(name=name, url=url, email=email)[0]:
         return False
@@ -1902,27 +1977,11 @@ def is_row_eligible_for_excel_export(row: dict) -> bool:
         return False
     if is_retail_store_operator_contact(url=url, email=email, text=text):
         return False
-    if (row.get("verification_reason") or "").strip() == PENDING_WWW_VERIFY_REASON:
-        if not (url and name):
-            return False
-        return is_polish_company_operating_in_germany(
-            name=name, url=url, email=email, text=text, require_de_evidence=False
-        )
-    if is_polish_company_operating_in_germany(
-        name=name, url=url, email=email, text=text, require_de_evidence=True
-    ):
-        return True
-    if needs_review_missing_de_evidence(
-        name=name, url=url, email=email, text=text
-    ):
-        return True
-    if row.get("retail_verified") and (
-        is_polish_company_operating_in_germany(
-            name=name, url=url, email=email, text=text, require_de_evidence=False
-        )
-    ):
-        return True
-    return False
+    return contact_qualifies_for_mail_queue(
+        pipeline_row_to_contact_info(row),
+        url,
+        skip_already_sent=False,
+    )
 
 
 def build_export_rows(rows, logger=None, cache=None):
@@ -1933,16 +1992,7 @@ def build_export_rows(rows, logger=None, cache=None):
             continue
         email = (row.get("email_target") or "").strip()
         if not email:
-            found_list = [
-                x.strip()
-                for x in (row.get("emails_found") or "").split(",")
-                if x.strip() and "@" in x
-            ]
-            if found_list:
-                email, _ = pick_best_email_for_inquiry(
-                    found_list,
-                    row.get("official_website") or row.get("www") or "",
-                )
+            continue
         if not is_row_llm_cleanup_enabled():
             row["adres"] = sanitize_special_text(
                 row.get("full_address") or row.get("adres") or ""
@@ -1983,6 +2033,8 @@ def build_bundesland_rows(rows):
     for row in rows:
         row = normalize_row_company_name(row)
         if _verification_reason_excludes_excel(row):
+            continue
+        if not is_row_eligible_for_excel_export(row):
             continue
         table = row_to_excel_wojewodztwa_columns(row)
         row_name = (table.get("Nazwa firmy") or "").strip()
@@ -2555,6 +2607,51 @@ def sync_pipeline_rows_to_contacts_cache(all_rows: list[dict], cache: dict) -> i
     return synced
 
 
+def contact_qualifies_for_mail_queue(
+    info: dict | None,
+    place_url: str = "",
+    *,
+    skip_already_sent: bool = True,
+    force_resend: bool = False,
+) -> bool:
+    """Czy kontakt ma wejść do wysyłki (bez limitu dziennego / okna godzinowego)."""
+    if not isinstance(info, dict):
+        return False
+    email_target = (info.get("email_target") or "").strip()
+    if not email_target:
+        return False
+    if contact_info_excluded(info, place_url):
+        return False
+    _em, _url, _name, _text = contact_validation_fields(info, place_url)
+    pending_www = (
+        (info.get("verification_reason") or "").strip() == PENDING_WWW_VERIFY_REASON
+        and not info.get("retail_verified")
+    )
+    if pending_www and email_target and (
+        info.get("is_gu") or is_generalunternehmer(_text)[0]
+    ):
+        pass
+    elif not info.get("retail_verified") and not is_polish_company_operating_in_germany(
+        email=email_target,
+        url=_url,
+        name=_name,
+        text=_text,
+    ):
+        return False
+    if not is_polish_company_operating_in_germany(
+        email=email_target,
+        url=_url,
+        name=_name,
+        text=_text,
+        require_de_evidence=True,
+    ):
+        return False
+    email_status = (info.get("email_status") or "").strip().lower()
+    if skip_already_sent and email_status == "sent" and not force_resend:
+        return False
+    return True
+
+
 def build_email_jobs_from_cache_json(
     logger: logging.Logger,
     *,
@@ -2576,42 +2673,11 @@ def build_email_jobs_from_cache_json(
     contacts = data.get("contacts", {}) if isinstance(data, dict) else {}
     jobs = []
     for place_url, info in contacts.items():
-        if not isinstance(info, dict):
+        if not contact_qualifies_for_mail_queue(
+            info, place_url, skip_already_sent=True, force_resend=force_resend
+        ):
             continue
         email_target = (info.get("email_target") or "").strip()
-        email_status = (info.get("email_status") or "").strip().lower()
-        if not email_target:
-            continue
-        if contact_info_excluded(info, place_url):
-            continue
-        _em, _url, _name, _text = contact_validation_fields(info, place_url)
-        pending_www = (
-            (info.get("verification_reason") or "").strip() == PENDING_WWW_VERIFY_REASON
-            and not info.get("retail_verified")
-        )
-        if pending_www and email_target and (
-            info.get("is_gu") or is_generalunternehmer(_text)[0]
-        ):
-            pass
-        elif not info.get("retail_verified") and not is_polish_company_operating_in_germany(
-            email=email_target,
-            url=_url,
-            name=_name,
-            text=_text,
-        ):
-            continue
-        if not is_polish_company_operating_in_germany(
-            email=email_target,
-            url=_url,
-            name=_name,
-            text=_text,
-            require_de_evidence=True,
-        ):
-            continue
-        if info.get("retail_verified"):
-            pass
-        if email_status == "sent" and not force_resend:
-            continue
         jobs.append(
             {
                 "place_url": place_url,
