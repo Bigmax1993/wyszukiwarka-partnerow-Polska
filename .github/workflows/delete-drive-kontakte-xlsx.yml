@@ -1,0 +1,33 @@
+name: Delete Drive kontakte xlsx
+
+# Jednorazowe / ręczne usunięcie de_gu_bauunternehmen_kontakte*.xlsx z Google Drive.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID || '1LdIQi0t1fgQMlHwNnvMdPn5lyv1zOqIJ' }}
+  SCRAPER_TIMEZONE: Europe/Warsaw
+  KANBUD_PROJECT_ROOT: ${{ github.workspace }}/libs
+
+jobs:
+  delete:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install -r requirements-drive.txt
+
+      - name: Delete kontakte Excel from Drive
+        env:
+          GDRIVE_OAUTH_REFRESH_TOKEN: ${{ secrets.GDRIVE_OAUTH_REFRESH_TOKEN }}
+          GDRIVE_OAUTH_CLIENT_ID: ${{ secrets.GDRIVE_OAUTH_CLIENT_ID }}
+          GDRIVE_OAUTH_CLIENT_SECRET: ${{ secrets.GDRIVE_OAUTH_CLIENT_SECRET }}
+          GDRIVE_SERVICE_ACCOUNT_JSON: ${{ secrets.GDRIVE_SERVICE_ACCOUNT_JSON }}
+        run: python scripts/gdrive_upload_wyniki.py --campaign-dir . --delete-kontakte-xlsx

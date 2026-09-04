@@ -390,6 +390,65 @@ def upload_folder_named(
     return count
 
 
+def _list_folder_files(service, parent_id: str) -> list[dict]:
+    files: list[dict] = []
+    page_token = None
+    while True:
+        res = (
+            service.files()
+            .list(
+                q=f"'{parent_id}' in parents and trashed = false",
+                fields="nextPageToken,files(id,name,mimeType)",
+                pageSize=100,
+                pageToken=page_token,
+                corpora="allDrives",
+                **_LIST_OPTS,
+            )
+            .execute()
+        )
+        files.extend(res.get("files") or [])
+        page_token = res.get("nextPageToken")
+        if not page_token:
+            break
+    return files
+
+
+def _is_kontakte_xlsx_name(name: str) -> bool:
+    """de_gu_bauunternehmen_kontakte.xlsx oraz wersje z datą (_YYYY-MM-DD_HHMM)."""
+    n = (name or "").strip().lower()
+    if not n.endswith(".xlsx"):
+        return False
+    return n == "de_gu_bauunternehmen_kontakte.xlsx" or n.startswith(
+        "de_gu_bauunternehmen_kontakte_"
+    )
+
+
+def delete_kontakte_xlsx_from_drive(
+    service,
+    folder_id: str,
+    *,
+    dry_run: bool = False,
+) -> int:
+    """Usuwa z Drive wszystkie de_gu_bauunternehmen_kontakte*.xlsx (do kosza)."""
+    deleted = 0
+    for item in _list_folder_files(service, folder_id):
+        name = item.get("name") or ""
+        if item.get("mimeType") == "application/vnd.google-apps.folder":
+            continue
+        if not _is_kontakte_xlsx_name(name):
+            continue
+        fid = item["id"]
+        if dry_run:
+            print(f"  DRY-RUN delete {name} ({fid})")
+        else:
+            service.files().update(
+                fileId=fid, body={"trashed": True}, **_DRIVE_API_OPTS
+            ).execute()
+            print(f"  DELETED {name} ({fid})")
+        deleted += 1
+    return deleted
+
+
 def _pick_final_excel_file(local_dir: Path) -> Path | None:
     """Wybiera końcowy Excel kontaktów (fallback: najnowszy .xlsx)."""
     if not local_dir.is_dir():
@@ -425,7 +484,21 @@ def main() -> int:
         action="store_true",
         help="Wyślij wyłącznie końcowy plik Excel kontaktów z Wyniki/",
     )
+    parser.add_argument(
+        "--delete-kontakte-xlsx",
+        action="store_true",
+        help="Usuń z Drive pliki de_gu_bauunternehmen_kontakte*.xlsx (bez uploadu)",
+    )
     args = parser.parse_args()
+
+    if args.dry_run and args.delete_kontakte_xlsx:
+        creds, use_oauth = _load_credentials()
+        service, _ = _drive_service(creds)
+        folder_id = _resolve_upload_folder(service, args.folder_id, use_oauth=use_oauth)
+        print(f"DRY-RUN delete kontakte xlsx w folderze {folder_id}")
+        n = delete_kontakte_xlsx_from_drive(service, folder_id, dry_run=True)
+        print(f"Do usunięcia: {n}")
+        return 0
 
     if args.dry_run:
         data_root = resolve_data_root(args.campaign_dir)
@@ -448,6 +521,12 @@ def main() -> int:
     service, MediaFileUpload = _drive_service(creds)
     data_root = resolve_data_root(args.campaign_dir)
     upload_folder_id = _resolve_upload_folder(service, args.folder_id, use_oauth=use_oauth)
+
+    if args.delete_kontakte_xlsx:
+        print(f"Usuwam de_gu_bauunternehmen_kontakte*.xlsx z Drive {upload_folder_id}")
+        n = delete_kontakte_xlsx_from_drive(service, upload_folder_id, dry_run=False)
+        print(f"Usunięto: {n}")
+        return 0 if n >= 0 else 1
 
     total = 0
     w = wyniki_dir(data_root)
