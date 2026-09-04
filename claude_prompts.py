@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Killer-Prompts für Claude Sonnet — GU/Filialbau-Kampagne DE.
-Jeder Prompt: eine Aufgabe, strikt JSON — Portale/PDF/Operatoren ablehnen.
+Killer-Prompts für Claude Sonnet — kampania PL→DE (Hurt Matbud).
+Target: polscy podwykonawcy / firmy budowlane i fit-out w Niemczech.
 """
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ from campaign_keyword_profile import (
     small_company_markers_sample,
 )
 
-_REQUIRED_CHAINS = "aldi, rewe, edeka, netto, penny, kaufland, lidl, norma"
+_REQUIRED_CHAINS = "aldi, rewe, edeka, netto, penny, kaufland, lidl, norma, rossmann, dm"
 PAGE_VERIFY_MAX_CHARS = 18000
 CONTACT_EXTRACT_MAX_CHARS = 16000
 _CONTACT_EXTRACT_TEXT_PRIORITY = (
@@ -38,7 +38,11 @@ _CONTACT_EXTRACT_TEXT_PRIORITY = (
 )
 _PAGE_VERIFY_TEXT_PRIORITY = (
     "referenz",
+    "referencje",
     "projekt",
+    "realizacj",
+    "niemcy",
+    "deutschland",
     "auftraggeber",
     "netto",
     "rewe",
@@ -47,13 +51,29 @@ _PAGE_VERIFY_TEXT_PRIORITY = (
     "kaufland",
     "penny",
     "edeka",
+    "rossmann",
+    "drogeri",
+    "restauran",
+    "gastronom",
+    "hotel",
+    "halle",
+    "magazyn",
+    "posadzk",
+    "wykończe",
+    "podwykonaw",
+    "budowl",
+    "klimatyzac",
+    "wentylac",
+    "ladenbau",
+    "innenausbau",
+    "shopfitting",
+    "fit-out",
     "einzelhandel",
     "retail",
     "filial",
     "supermarkt",
-    "discounter",
-    "generalunternehmer",
     "gewerbebau",
+    "industriebau",
     "karriere",
     "stellen",
 )
@@ -358,7 +378,8 @@ def build_discovery_terms_prompt(
     neg_kw = ", ".join(negative_keywords_sample(max_items=8))
     return f"""ROLLE
 Generujesz zapytania Google (Serper) do discovery POLSKICH firm, które pracują w Niemczech
-(wyposażenie sklepów, posadzki, budownictwo, podwykonawcy). Miasto = siedziba w PL.
+(budownictwo, podwykonawcy, wykończenia, sklepy/drogerie/restauracje, hale, instalacje, posadzki).
+Miasto = siedziba w PL.
 
 KONTEXT
 Województwo: {land_str}
@@ -368,9 +389,9 @@ VORLAGEN ({{city}} = polskie miasto)
 {templates}
 
 PFLICHT pro Zeile
-• Branża: wyposażenie sklepów / posadzki / Ladenbau / podwykonawca / budownictwo
+• Branża: podwykonawca / budowlana / wykończenia / posadzki / Ladenbau / HVAC / hale
 • Znacznik Niemiec: Niemcy albo Deutschland
-• Opcjonalnie sieć: {_REQUIRED_CHAINS} (rotieren)
+• Opcjonalnie obiekt/sieć: sklep, drogeria, restauracja, {_REQUIRED_CHAINS}
 • Max {max_term_len} Zeichen
 • Polski (ew. Ladenbau/Innenausbau), bez numeracji, bez cudzysłowów
 
@@ -382,9 +403,10 @@ VERBOTEN
 {exclude_block}
 
 GUTE BEISPIELE
-wyposażenie sklepów Wrocław Niemcy
-posadzki żywiczne Poznań Lidl
-podwykonawca budowa sklepów Katowice Deutschland
+podwykonawca budowlany Wrocław Niemcy
+wykończenia restauracje Kraków Deutschland
+posadzki przemysłowe Poznań hale Niemcy
+instalacje HVAC sklepy Lidl Niemcy
 Ladenbau Firma Szczecin Polen
 
 SCHLECHTE BEISPIELE

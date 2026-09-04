@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Weryfikacja strony www (GU / Filialbau) — prompt, parser JSON, guardrails."""
+"""Weryfikacja strony www — Claude JSON + guardrails (PL podwykonawcy / legacy GU)."""
 from __future__ import annotations
 
 import json
@@ -7,6 +7,12 @@ import re
 
 from campaign_keyword_profile import REJECT_PRIMARY_ROLES
 from claude_prompts import build_page_verify_prompt as _build_page_verify_prompt
+from pl_de_company_filter import (
+    has_commercial_or_industrial_object_context,
+    has_germany_work_evidence,
+    has_target_trade,
+    mentions_pl_builder_activity,
+)
 from retail_store_builder_filter import (
     REQUIRED_RETAIL_CHAIN_KEYWORDS,
     detect_required_retail_chains,
@@ -29,18 +35,20 @@ def hard_reject_page_context(
     url: str = "",
     name: str = "",
     page_text: str = "",
+    require_generalunternehmer: bool = True,
 ) -> tuple[bool, str]:
-    """Twarde NO-GO — operator, media, role nie-GU."""
+    """Twarde NO-GO — operator sklepu, media; w trybie GU także role nie-GU / sam fit-out."""
     blob = " ".join([name, url, page_text]).lower()
     if is_retail_store_operator_contact(url=url, text=blob):
         return True, "einzelhandel_betrieb_kein_bau"
     if is_media_publisher_contact(url=url, name=name, text=blob):
         return True, "medienportal"
-    if is_excluded_non_gu_role(blob):
-        return True, "excluded_non_gu_role"
-    interior, interior_reason = is_interior_fitout_specialist(blob)
-    if interior:
-        return True, interior_reason
+    if require_generalunternehmer:
+        if is_excluded_non_gu_role(blob):
+            return True, "excluded_non_gu_role"
+        interior, interior_reason = is_interior_fitout_specialist(blob)
+        if interior:
+            return True, interior_reason
     return False, ""
 
 
@@ -100,7 +108,9 @@ def apply_page_verdict(
 ) -> tuple[bool, str, list[str]]:
     """Werdykt z JSON Claude + guardrails na tekście strony."""
     blob = " ".join([page_text or "", serper_blob or ""]).lower()
-    hard, hard_reason = hard_reject_page_context(page_text=blob)
+    hard, hard_reason = hard_reject_page_context(
+        page_text=blob, require_generalunternehmer=require_generalunternehmer
+    )
     if hard:
         return False, hard_reason, []
 
@@ -112,15 +122,19 @@ def apply_page_verdict(
     if role and role.lower() in _REJECT_ROLES_NORMALIZED:
         return False, f"claude_role:{role}", llm.get("matched_chains") or []
 
+    if not require_generalunternehmer:
+        return _apply_pl_builder_verdict(
+            llm, blob=blob, require_small_firm=require_small_firm
+        )
+
     gu_campaign_ok, _gu_marker = qualifies_as_gu_for_campaign(blob)
     if not llm.get("is_gu") and not gu_campaign_ok:
         return False, "claude_kein_gu", llm.get("matched_chains") or []
 
-    if require_generalunternehmer:
-        gu_text, _ = is_generalunternehmer(blob)
-        gu_json = bool(llm.get("matched_gu_keywords"))
-        if not gu_text and not gu_json and not gu_campaign_ok:
-            return False, "kein_generalunternehmer", llm.get("matched_chains") or []
+    gu_text, _ = is_generalunternehmer(blob)
+    gu_json = bool(llm.get("matched_gu_keywords"))
+    if not gu_text and not gu_json and not gu_campaign_ok:
+        return False, "kein_generalunternehmer", llm.get("matched_chains") or []
 
     has_retail = bool(llm.get("has_retail_context")) or has_market_project_evidence_on_website(
         blob
@@ -146,4 +160,40 @@ def apply_page_verdict(
         return False, "claude_kein_kleinunternehmen", chains
 
     reason = (llm.get("reason") or "claude_gu_retail").strip()
+    return True, f"claude:{reason[:120]}", chains
+
+
+def _apply_pl_builder_verdict(
+    llm: dict,
+    *,
+    blob: str,
+    require_small_firm: bool,
+) -> tuple[bool, str, list[str]]:
+    """Kampania PL→DE: Claude is_gu = polski wykonawca w DE; bez wymogu sieci/Filialbau."""
+    trade_ok = (
+        bool(llm.get("is_gu"))
+        or mentions_pl_builder_activity(blob)
+        or has_target_trade(blob)
+    )
+    if not trade_ok:
+        return False, "claude_kein_pl_bau", llm.get("matched_chains") or []
+
+    de_or_object = (
+        bool(llm.get("has_retail_context"))
+        or has_germany_work_evidence(blob)
+        or has_commercial_or_industrial_object_context(blob)
+        or has_market_project_evidence_on_website(blob)
+    )
+    if not de_or_object:
+        return False, "claude_kein_de_kontekst", llm.get("matched_chains") or []
+
+    if require_small_firm and not llm.get("is_small_firm"):
+        return False, "claude_kein_kleinunternehmen", llm.get("matched_chains") or []
+
+    chains = detect_required_retail_chains(blob)
+    for c in llm.get("matched_chains") or []:
+        low = str(c).lower().strip()
+        if low and low not in chains:
+            chains.append(low)
+    reason = (llm.get("reason") or "pl_podwykonawca_bau").strip()
     return True, f"claude:{reason[:120]}", chains

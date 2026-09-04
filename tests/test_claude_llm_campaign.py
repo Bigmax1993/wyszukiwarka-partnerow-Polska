@@ -251,6 +251,52 @@ class PageVerifyTest(unittest.TestCase):
         self.assertFalse(ok)
         self.assertIn("einzelhandel_betrieb", reason)
 
+    def test_apply_verdict_pl_accepts_hvac_without_filialbau_chain(self):
+        llm = {
+            "is_gu": True,
+            "has_retail_context": True,
+            "primary_role": "Podwykonawca",
+            "matched_gu_keywords": ["podwykonawca", "klimatyzacja"],
+            "matched_retail_keywords": ["sklepy"],
+            "matched_chains": [],
+            "matched_negative_keywords": [],
+            "is_small_firm": True,
+            "reason": "PL HVAC sklepy Niemcy",
+        }
+        page = (
+            "Klimat Tech sp. z o.o. — klimatyzacja i wentylacja obiektów handlowych. "
+            "Realizacje w Niemczech, montaż w sklepach."
+        )
+        ok, reason, _ = apply_page_verdict(
+            llm,
+            page_text=page,
+            require_generalunternehmer=False,
+            require_small_firm=False,
+        )
+        self.assertTrue(ok, reason)
+        self.assertTrue(reason.startswith("claude:"))
+
+    def test_apply_verdict_pl_rejects_portal_role(self):
+        llm = {
+            "is_gu": False,
+            "has_retail_context": False,
+            "primary_role": "Portal",
+            "matched_gu_keywords": [],
+            "matched_retail_keywords": [],
+            "matched_chains": [],
+            "matched_negative_keywords": [],
+            "is_small_firm": False,
+            "reason": "KRS portal",
+        }
+        ok, reason, _ = apply_page_verdict(
+            llm,
+            page_text="Pobierz odpis KRS spółki",
+            require_generalunternehmer=False,
+            require_small_firm=False,
+        )
+        self.assertFalse(ok)
+        self.assertEqual(reason, "claude_role:Portal")
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

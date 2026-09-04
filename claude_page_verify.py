@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Claude Sonnet: weryfikacja kontekstu strony www (GU / Filialbau / sieci handlowe)."""
+"""Claude Sonnet: weryfikacja kontekstu strony www (PL podwykonawcy / legacy GU)."""
 from __future__ import annotations
 
 from typing import Callable
@@ -42,7 +42,10 @@ def claude_verify_company_page(
         return dict(verify_cache[cache_key])
 
     hard, hard_reason = hard_reject_page_context(
-        url=website, name=company_name, page_text=page_text
+        url=website,
+        name=company_name,
+        page_text=page_text,
+        require_generalunternehmer=require_generalunternehmer,
     )
     if hard:
         out = {
@@ -80,9 +83,20 @@ def claude_verify_company_page(
         require_generalunternehmer=require_generalunternehmer,
         require_small_firm=require_small_firm,
     )
-    gu_ok, gu_marker = is_generalunternehmer(
-        " ".join([page_text, serper_blob, " ".join(parsed.get("matched_gu_keywords") or [])])
-    )
+    if require_generalunternehmer:
+        gu_ok, gu_marker = is_generalunternehmer(
+            " ".join(
+                [
+                    page_text,
+                    serper_blob,
+                    " ".join(parsed.get("matched_gu_keywords") or []),
+                ]
+            )
+        )
+    else:
+        # W kampanii PL is_gu z Claude = polski wykonawca z pracą w DE.
+        gu_ok = bool(parsed.get("is_gu")) or verified
+        gu_marker = (parsed.get("primary_role") or "").strip()
     out = {
         "verified": verified,
         "verification_reason": reason,
