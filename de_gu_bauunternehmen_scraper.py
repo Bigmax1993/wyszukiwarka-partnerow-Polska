@@ -6276,7 +6276,15 @@ def _process_serper_terms(
                     "institution",
                 )
                 continue
-            if not is_row_eligible_for_excel_export(r):
+            # serper-only pending: bez e-maila — zapis do cache; Excel Kontakte wymaga maila później
+            serper_only_pending_no_email = (
+                serper_only
+                and EXPORT_PIPELINE_ROWS_WITHOUT_EMAIL
+                and not (r.get("email_target") or "").strip()
+            )
+            if not serper_only_pending_no_email and not is_row_eligible_for_excel_export(
+                r
+            ):
                 console_step(
                     f"Übersprungen (nie do Excela): {r.get('nazwa', '')}"
                 )
