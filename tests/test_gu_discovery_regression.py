@@ -965,21 +965,32 @@ class DiscoveryFunnelRegression(unittest.TestCase):
 
 
 class RetailChainSerperRotationRegression(unittest.TestCase):
-    def test_discovery_terms_include_rotating_chains(self):
+    def test_discovery_terms_mostly_broad_without_chains(self):
         terms = build_discovery_terms(["Dolnoslaskie"], max_terms=40)
         blob = " ".join(terms).lower()
-        self.assertTrue("niemcy" in blob or "deutschland" in blob)
+        self.assertTrue("niemcy" in blob or "deutschland" in blob or "ladenbau" in blob)
+        self.assertTrue(
+            any("podwykonawca budowlany" in t.lower() for t in terms)
+            or any("firma budowlana" in t.lower() for t in terms)
+        )
+        chain_hits = sum(
+            1
+            for t in terms
+            if any(c.lower() in t.lower() for c in RETAIL_CHAINS_ROTATION)
+        )
+        # Główna warstwa bez sieci; co najwyżej rzadka warstwa chain.
+        self.assertLessEqual(chain_hits, max(1, len(terms) // 5))
+
+    def test_discovery_terms_include_sparse_chain_layer(self):
+        terms = build_discovery_terms(["Malopolskie"], max_terms=80)
+        blob = " ".join(terms).lower()
+        self.assertTrue("niemcy" in blob or "ladenbau" in blob or "deutschland" in blob)
         found = {
             c
             for c in RETAIL_CHAINS_ROTATION
             if any(c.lower() in t.lower() for t in terms)
         }
         self.assertGreaterEqual(len(found), 1)
-
-    def test_discovery_terms_cycle_all_whitelist_chains(self):
-        terms = build_discovery_terms(["Malopolskie"], max_terms=80)
-        blob = " ".join(terms).lower()
-        self.assertTrue("niemcy" in blob or "ladenbau" in blob)
 
 
 class RotationThresholdRegression(unittest.TestCase):

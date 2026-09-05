@@ -9,6 +9,7 @@ import importlib.util
 from pathlib import Path
 
 from pl_wojewodztwa import (
+    CHAIN_LAYER_TERM_TEMPLATES,
     CHAIN_SIMPLE_TERM_TEMPLATES,
     RETAIL_CHAINS_ROTATION,
     SERPER_NEGATIVE_TERMS as _PL_SERPER_NEGATIVE,
@@ -143,19 +144,35 @@ def _format_chain_term(
 def build_discovery_terms(
     active: list[str] | None = None, *, max_terms: int | None = None
 ) -> list[str]:
+    """
+    Warstwa główna: szerokie frazy (miasto/branża/Niemcy) bez sieci.
+    Warstwa sieci: tylko co 3. miasto + nationwide — mniej api_zero.
+    """
     lands = resolve_active_bundeslaender(active)
     if max_terms is None:
         max_terms = default_max_discovery_terms_for(lands)
     seen: set[str] = set()
     terms: list[str] = []
     chain_counter = [0]
-    all_templates = (*CHAIN_SIMPLE_TERM_TEMPLATES, *TERM_TEMPLATES)
+    primary = (*CHAIN_SIMPLE_TERM_TEMPLATES, *TERM_TEMPLATES)
+    city_i = 0
     for land in lands:
         cfg = BUNDESLAND_CONFIG[land]
-        cities = cfg["cities"]
-        for city in cities:
-            for tmpl in all_templates:
+        for city in cfg["cities"]:
+            for tmpl in primary:
+                if _append_unique_term(
+                    terms,
+                    seen,
+                    _format_chain_term(tmpl, city=city, land=land, chain=""),
+                    max_terms=max_terms,
+                ):
+                    return terms
+            # Sieci rzadziej: co 3. miasto, jeden szablon z rotacją.
+            if city_i % 3 == 0 and CHAIN_LAYER_TERM_TEMPLATES:
                 chain = _rotating_chain(chain_counter)
+                tmpl = CHAIN_LAYER_TERM_TEMPLATES[
+                    (city_i // 3) % len(CHAIN_LAYER_TERM_TEMPLATES)
+                ]
                 if _append_unique_term(
                     terms,
                     seen,
@@ -163,24 +180,30 @@ def build_discovery_terms(
                     max_terms=max_terms,
                 ):
                     return terms
-    if len(lands) >= 10:
-        nationwide = (
-            "podwykonawca budowlany Polska Niemcy {chain}",
-            "firma budowlana realizacje Niemcy {chain}",
-            "wyposażenie sklepów Polska Niemcy {chain}",
-            "wykończenia restauracje hotele Niemcy {chain}",
-            "posadzki przemysłowe hale Niemcy {chain}",
-            "Ladenbau Firma Polska {chain}",
-        )
-        for tmpl in nationwide:
-            chain = _rotating_chain(chain_counter)
-            if _append_unique_term(
-                terms,
-                seen,
-                tmpl.format(chain=chain),
-                max_terms=max_terms,
-            ):
-                return terms
+            city_i += 1
+    nationwide = (
+        "podwykonawca budowlany Polska Niemcy",
+        "firma budowlana realizacje Niemcy",
+        "firma budowlana Polska Deutschland",
+        "wyposażenie sklepów Polska Niemcy",
+        "Ladenbau Polen Polska",
+        "Innenausbau Polen Deutschland",
+        "posadzki przemysłowe Polska Niemcy",
+        "wykończenia restauracje hotele Niemcy",
+    )
+    for tmpl in nationwide:
+        if _append_unique_term(terms, seen, tmpl, max_terms=max_terms):
+            return terms
+    # Cienka warstwa sieci nationwide (1 fraza na sieć z rotacji).
+    for _ in range(min(len(RETAIL_CHAINS_ROTATION), 6)):
+        chain = _rotating_chain(chain_counter)
+        if _append_unique_term(
+            terms,
+            seen,
+            f"wyposażenie sklepów Polska Niemcy {chain}",
+            max_terms=max_terms,
+        ):
+            return terms
     return terms
 
 
@@ -247,16 +270,15 @@ def build_broad_discovery_terms(active: list[str] | None = None) -> list[str]:
                     terms, seen, tmpl.format(city=city, chain=chain), max_terms=10_000
                 )
         for tmpl in (
-            "wyposażenie sklepów {land} Niemcy {chain}",
-            "posadzki {land} {chain}",
-            "podwykonawca {short} Niemcy {chain}",
-            "Ladenbau {land} Polska {chain}",
+            "wyposażenie sklepów {land} Niemcy",
+            "posadzki {land}",
+            "podwykonawca {short} Niemcy",
+            "Ladenbau {land} Polska",
         ):
-            chain = _rotating_chain(chain_counter)
             _append_unique_term(
                 terms,
                 seen,
-                tmpl.format(land=display, short=short, chain=chain),
+                tmpl.format(land=display, short=short),
                 max_terms=10_000,
             )
     return terms
@@ -270,21 +292,24 @@ def build_fallback_terms(active: list[str] | None = None) -> list[str]:
         display = display_wojewodztwo(land)
         short = BUNDESLAND_CONFIG[land]["short"]
         for tmpl in (
-            "wyposażenie sklepów {land} Niemcy {chain}",
-            "posadzki sklepowe {short} Niemcy {chain}",
+            "wyposażenie sklepów {land} Niemcy",
+            "posadzki sklepowe {short} Niemcy",
             "podwykonawca {land} budowa sklepów",
             "firma {land} Ladenbau Deutschland",
         ):
-            chain = _rotating_chain(chain_counter)
-            fb.append(tmpl.format(land=display, short=short, chain=chain))
+            fb.append(tmpl.format(land=display, short=short))
     for tmpl in (
-        "wyposażenie sklepów Polska Niemcy {chain}",
-        "posadzki żywiczne Niemcy {chain}",
-        "podwykonawca budowa sklepów Deutschland {chain}",
-        "Innenausbau Polen Deutschland {chain}",
+        "wyposażenie sklepów Polska Niemcy",
+        "posadzki żywiczne Niemcy",
+        "podwykonawca budowa sklepów Deutschland",
+        "Innenausbau Polen Deutschland",
+        "Ladenbau Polen",
     ):
+        fb.append(tmpl)
+    # Rzadka warstwa sieci w fallbacku.
+    for _ in range(3):
         chain = _rotating_chain(chain_counter)
-        fb.append(tmpl.format(chain=chain))
+        fb.append(f"wyposażenie sklepów Polska Niemcy {chain}")
     seen: set[str] = set()
     out: list[str] = []
     for t in fb:

@@ -225,34 +225,43 @@ RETAIL_CHAINS_ROTATION = (
 )
 
 # Frazy Serper: siedziba w PL + praca / realizacje w DE.
-# Branże: sklepy, drogerie, restauracje, hale, wykończenia, instalacje — nie niemieccy GU.
+# Warstwa główna: szerokie (miasto + branża + Niemcy) — bez sieci i bez województwa.
+# Sieci (Aldi/Lidl/…) tylko w CHAIN_LAYER_* (rzadko), żeby nie generować api_zero.
 CHAIN_SIMPLE_TERM_TEMPLATES = (
     "podwykonawca budowlany {city} Niemcy",
+    "firma budowlana {city} Deutschland",
     "firma budowlana {city} realizacje Niemcy",
     "wyposażenie sklepów {city} Niemcy",
-    "wykończenia wnętrz sklepy restauracje Niemcy {city}",
-    "posadzki przemysłowe {city} Niemcy",
-    "posadzki sklepowe {city} {chain}",
-    "montaż sklepów drogerii {chain} Niemcy {city}",
-    "hale przemysłowe {city} Niemcy",
-    "instalacje elektryczne budynki Niemcy {city}",
-    "klimatyzacja wentylacja obiekty handlowe Niemcy {city}",
-    "suche zabudowy GK obiekty Niemcy {city}",
-    "Ladenbau Firma Polska {city}",
+    "Ladenbau Polen {city}",
     "Innenausbau Polen {city} Deutschland",
-    "fit-out sklepy restauracje Niemcy {city}",
+    "posadzki przemysłowe {city} Niemcy",
+    "posadzki żywiczne {city} Niemcy",
+    "wykończenia wnętrz sklepy Niemcy {city}",
+    "montaż sklepów {city} Niemcy",
+    "hale przemysłowe {city} Niemcy",
+    "instalacje elektryczne Niemcy {city}",
+    "klimatyzacja wentylacja Niemcy {city}",
+    "fit-out sklepy Niemcy {city}",
     "stolarka aluminiowa witryny Niemcy {city}",
+    "podwykonawca {city} budownictwo Niemcy",
+    "obiekty handlowe {city} podwykonawca Niemcy",
 )
 
 TERM_TEMPLATES = (
-    "podwykonawca {city} {wojewodztwo} budownictwo Niemcy",
-    "firma budowlana {city} realizacje Deutschland {chain}",
-    "wyposażenie sklepów {city} {wojewodztwo} Niemcy {chain}",
+    "podwykonawca {city} {wojewodztwo} Niemcy",
+    "firma budowlana {wojewodztwo} realizacje Deutschland",
+    "wyposażenie sklepów {wojewodztwo} Niemcy",
     "wykończenia restauracje hotele Niemcy {city}",
     "posadzki żywiczne hale magazyny Niemcy {city}",
-    "montaż drogerii Rossmann DM Niemcy {city}",
     "instalacje HVAC sklepy Niemcy {city}",
-    "obiekty handlowe {city} podwykonawca Niemcy",
+    "suche zabudowy GK {city} Niemcy",
+)
+
+# Osobna, rzadka warstwa z sieciami handlowymi DE.
+CHAIN_LAYER_TERM_TEMPLATES = (
+    "montaż sklepów {chain} Niemcy {city}",
+    "wyposażenie sklepów {city} Niemcy {chain}",
+    "posadzki sklepowe {city} {chain}",
 )
 
 SIMPLE_TERM_TEMPLATES = CHAIN_SIMPLE_TERM_TEMPLATES

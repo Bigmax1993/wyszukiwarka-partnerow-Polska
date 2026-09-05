@@ -5722,6 +5722,13 @@ def reenrich_contacts_for_mailing(
     urls = set(contacts_cache.keys()) | set(by_url.keys())
     console_step(f"Ponowne wzbogacanie kontaktów: {len(urls)} URL")
     for url in urls:
+        if request_stop_on_runtime_limit(logger, console_step_fn=console_step):
+            console_step(
+                "Limit czasu — przerywam crawl www; zapisuję postęp i lecę do wysyłki "
+                "z tym, co już jest."
+            )
+            persist_progress(all_rows, cache, logger, reason="runtime_limit_reenrich")
+            break
         if not url:
             continue
         cached = contacts_cache.get(url, {})
@@ -5778,6 +5785,12 @@ def _process_email_jobs(
         if (r.get("url") or "").strip()
     }
     for mail in jobs_to_send:
+        if request_stop_on_runtime_limit(logger, console_step_fn=console_step):
+            console_step(
+                "Limit czasu — kończę wysyłkę; pozostałe maile w kolejnym runie."
+            )
+            persist_progress(all_rows, cache, logger, reason="runtime_limit_send")
+            break
         target = mail["email_target"]
         domain = get_email_domain(target)
         place_url = mail.get("place_url", "")
